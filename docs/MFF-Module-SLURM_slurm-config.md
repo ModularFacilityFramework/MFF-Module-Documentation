@@ -1,0 +1,215 @@
+# SLURM module configuration
+
+Per `CLAUDE.md`'s "MFF architecture rules" and `docs/MFF-Core_env-policy.md`, the target is exactly one `.env` in the whole system (`App_backend/.env`, core's own) — no module, this one included, holds its own `.env` file, for anything, ever. There is exactly one config mechanism, and it covers this module's own database credentials and every setting below identically, with no distinction between them: `backend/index.js`'s `register(coreApi)` calls `coreApi.getModuleConfig()` **exactly once** and gets back one object containing `DB_HOST`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` (provisioned automatically - every module gets its own database on Install, nothing to declare for that part) alongside every variable below (each declared in this module's `module.manifest.json`'s `config` array - see `docs/MFF-Core_module-manifest.md`'s `"config"` field - so core auto-provisions them into `App_backend/.env` on Install/Update too, no CLI instructions, no hand-edited file anywhere). That one object is passed to both `backend/config/database.js`'s `createPool()` and `backend/config/slurmConfig.js`'s `init()` - `getModuleConfig()` is never called a second time.
+
+None of the variables below are declared `"required": true` in the manifest - this module's monitoring/detection routes (`GET /nodes`, `/partitions`, `/stats`, `/stats/history`) work with every one of them left at its default. They only matter once a facility wants the optional restart/recovery/external-API features, so an admin sets them via `App_backend/.env` (or whatever settings UI core builds atop `getModuleConfig()`) only if and when they want those features.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SLURM_SSH_USER` | `slurm` | SSH user this module connects as to restart daemons |
+| `SLURM_SSH_KEY_PATH` | *(none - required for restart)* | Path to the private key used for SSH restarts |
+| `SLURM_CONTROLLER_HOST` | *(none - required for master restart)* | Hostname of the node running `slurmctld` |
+| `SLURM_POLL_INTERVAL_MS` | `300000` (5 min) | How often nodes/partitions/queue are snapshotted into this module's history tables |
+| `SLURM_RESTART_NODE_CMD` | `sudo systemctl restart slurmd` | Command run over SSH on a compute node |
+| `SLURM_RESTART_MASTER_CMD` | `sudo systemctl restart slurmctld` | Command run over SSH on the controller |
+| `SLURM_BIN_SQUEUE` | `squeue` | Override if not on PATH |
+| `SLURM_BIN_SCONTROL` | `scontrol` | Override if not on PATH |
+| `SLURM_CTLD_LOG_PATH` | `/var/log/slurm/slurmctld.log` | Path on the controller the Logs tab's download button tails |
+| `SLURM_LOG_TAIL_LINES` | `10000` | How many lines of that log get downloaded - bounded so this can never try to ship a multi-GB file |
+| `SLURM_ADMIN_USER` | `root` | OS user the node-recovery resume command runs as, via local `sudo -u` - see "Node recovery" below. Set to a dedicated non-root Slurm operator account instead if preferred, or `""` (empty) to run as the backend's own OS user with no sudo hop at all |
+| `SLURM_BIN_SACCTMGR` | `sacctmgr` | Override if not on PATH - used by the external API's Slurm-access gate (see below) |
+| `SLURM_BIN_SACCT` | `sacct` | Override if not on PATH - used by the external API's job-status route |
+| `SLURM_BIN_SBATCH` | `sbatch` | Override if not on PATH - used by the external API's job-submission route |
+| `SLURM_BIN_SCANCEL` | `scancel` | Override if not on PATH - used by the external API's job-cancel route |
+
+## What this module does NOT do
+
+- **Provision SSH access.** The SSH key at `SLURM_SSH_KEY_PATH` and the
+  corresponding `authorized_keys` entry on every compute node + the
+  controller must already exist before restart endpoints will work.
+  Detection/stats (`GET /nodes`, `/partitions`, `/stats`, `/stats/history`)
+  work without any of this.
+- **Provision sudo rights.** The SSH user must be able to run
+  `SLURM_RESTART_NODE_CMD`/`SLURM_RESTART_MASTER_CMD` without a password
+  prompt (e.g. a `NOPASSWD` sudoers entry scoped to exactly that command) -
+  this module has no way to type a password into an SSH session.
+- **Provision the local sudo rights `SLURM_ADMIN_USER` needs.** `scontrol
+  update NodeName=... State=RESUME` (the Recover action - see below) is a
+  Slurm control-plane *write*, not a read, and Slurm enforces its own
+  authorization for it independent of the OS: run directly as an arbitrary
+  OS user, it fails with `slurm_update error: Invalid user id` - confirmed
+  directly against this repo's own dev cluster. `SLURM_ADMIN_USER` (default
+  `root`, since Slurm always trusts uid 0 with no `sacctmgr` registration
+  needed) tells `resumeNode()` to run the command as that user instead, via
+  a local `sudo -u` - which means the backend's own OS user needs
+  passwordless sudo rights to run `scontrol` as `SLURM_ADMIN_USER` (a
+  `NOPASSWD` sudoers entry). Detection/stats need none of this (those are
+  reads).
+
+Both of the above are the cluster administrator's responsibility, set up
+directly on the Slurm hosts - not something this repo can orchestrate (same
+reasoning as `docs/MFF-Module-template_install.md`'s "no install script" section: infrastructure
+provisioning belongs to whoever owns that infrastructure, not to code that
+merely uses it).
+
+## How detection works
+
+`backend/services/slurmCli.js` shells out to `scontrol show node --json`,
+`scontrol show partition --json`, and `squeue --json` on whatever host this
+module's backend process runs on - so that host needs the Slurm client
+binaries and Munge authentication already configured to reach the cluster's
+`slurmctld` (same as any other Slurm client). No `slurmrestd`, no separate
+REST layer.
+
+## Restart audit trail
+
+Every restart attempt (single node, all nodes, master, all-nodes+master, or
+a node resume) - success or failure - is logged to this module's
+`slurm_restart_log` table (who triggered it, what target, and the
+command's output/error) - see `backend/db/schema.sql`.
+
+## Node recovery
+
+The "Recover" action next to a down/drained/unknown node (`NodeTable.js` /
+`NodeRecovery.js`) runs `scontrol update NodeName=<node> State=RESUME` as
+`SLURM_ADMIN_USER` (via local `sudo -u`, see above) - this is a normal
+control-plane call, not an SSH restart, so it needs no `SLURM_SSH_KEY_PATH`
+at all. It **does** need the local sudo rights described above - without
+them, the button fails cleanly (the UI shows the actual `slurm_update
+error: ...` or `sudo: ...` reason next to "still down" rather than silently
+doing nothing) but never succeeds. It's the *first*, safest stage of a
+three-stage, status-checked escalation: the backend re-checks the node's
+actual state afterwards and reports whether it actually cleared the
+problem. Only if it didn't does the UI offer stage 2 (restart that node's
+`slurmd`, the existing SSH-based restart) and, only if that also didn't fix
+it, stage 3 (restart `slurmctld` - cluster-wide, with its own
+confirmation). Stages 2 and 3 need SSH configuration; stage 1 needs the
+local sudo rights above instead.
+
+## Logs tab
+
+Downloads the tail of `SLURM_CTLD_LOG_PATH` from `SLURM_CONTROLLER_HOST`
+over SSH - same SSH configuration requirement as restarts.
+
+## External API for other modules
+
+Other modules (e.g. ABCFold) reach this module's Slurm capabilities via
+core's generic module-to-module bridge -
+`coreApi.callModule(token, 'slurm', method, path, opts)` (see
+`docs/MFF-Core_module-core-api.md`) - never a Slurm-specific named wrapper.
+Core deliberately doesn't build per-module wrapper functions; `callModule`
+is the one proxy every module uses to reach every other module. This
+section documents the actual HTTP routes that proxy calls into
+(`backend/routes/slurmApiRoutes.js`, mounted at `/api/slurm/external/*` -
+i.e. `path` above is `/external/...` - a router deliberately separate from
+this module's own UI-facing routes in `backend/routes/slurmRoutes.js`).
+
+`callModule` forwards the calling user's own bearer token on every
+request, so `authenticateToken`/`requireSlurmAccess` see the real
+originating user, not a service identity - access below is scoped per that
+specific person, both for the Slurm-registration gate and for job
+ownership. Per `callModule`'s own "never throws" contract, it always
+resolves to `{ ok, status, error }` - a caller should check `ok`/`status`
+rather than assume a thrown exception ever happens on their end.
+
+### Access gate
+
+Every route below requires (in order):
+
+1. A valid mff-core session (`coreApi.authenticateToken` - the usual
+   bearer-token check).
+2. **The calling user must be an actual registered Slurm user** - checked
+   against `sacctmgr show user --json` (`backend/services/slurmUsers.js`),
+   *not* against any mff-core role. A real app user can easily not be a
+   real Slurm user, and vice versa. A rejection here looks like:
+   ```json
+   { "error": "No Slurm access", "message": "The current user does not have access to Slurm." }
+   ```
+   status `403`. This is a different rejection from the per-job ownership
+   check below - "you're not a Slurm user at all" vs. "this isn't your job".
+
+### `GET /resource-profile?gpuCount=N`
+
+The admin-configured `{ gpuCount, partition, gres, cpusPerTask, mem, time }`
+policy row for a job requesting `N` GPUs (managed via this module's own
+"Job Profiles" admin tab, table `slurm_resource_profile`). Returns JSON
+`null` (200) if no profile has been configured for that exact count -
+policy is genuinely undefined at that point, not an error.
+
+### `GET /gpu-partitions`
+
+Array of `{ name, nodes, gpusPerNode, gpuModel, gres, gpuMemoryGB }` - which
+partitions actually have GPUs, and what they are. `nodes` is this
+partition's GPU node count (this route already only returns partitions
+that have GPU nodes at all) - named to match ABCFold's own expected
+partition-listing shape exactly, so it needs no reshaping on ABCFold's
+side. `gpuMemoryGB` is `null` until an admin enters that model's memory
+size on the Job Profiles tab (table
+`slurm_gpu_model`) - Slurm itself never reports GPU memory size anywhere.
+
+### `POST /jobs`
+
+Submits a job on the calling user's behalf. Body:
+
+```json
+{
+  "workDir": "/abs/path/to/an/already-prepared/job/directory",
+  "jobName": "optional label"
+}
+```
+
+**This module never creates, writes into, or reads any file or directory
+itself.** `workDir` must already exist and already contain a `submit.sh`
+script (`backend/services/slurmJobs.js`'s `SCRIPT_FILENAME`) plus any input
+files the job needs - written there by the caller (ultimately core's
+responsibility, same "requires, never provisions" boundary as
+`SLURM_SSH_KEY_PATH` above) *before* calling this route. This module treats
+`workDir` as an opaque string, passed straight through to `sbatch --chdir`
+- exactly like a node name or job ID, never composed, created, or read by
+this module. `workDir` must be readable by every compute node too (the
+job's script/input files need to exist wherever it actually runs).
+
+The job's stdout/stderr are always written as fixed filenames - `slurm.out`
+/ `slurm.err` - inside `workDir` (via `sbatch --output=... --error=...`),
+regardless of what the submitted script itself does or doesn't set, so
+whoever owns `workDir` always knows exactly where to find them. Response:
+`{ "jobId": 12345 }`. Every submission is recorded in `slurm_submitted_job`
+(who submitted it, the `workDir` string it was given) - audit/ownership
+metadata only, never read back off disk by this module.
+
+**This module provides no file-listing/download routes** - it never reads
+`workDir`'s contents, so it can't serve them back either. Whoever
+provisions `workDir` (core) owns serving its contents to a caller, if
+that's needed.
+
+### `GET /jobs/:jobId`
+
+Current status: `{ jobId, state, reason, exitCode, submittedAt, startedAt,
+endedAt }`, from `sacct -j <jobId> --json` (covers active *and*
+completed/failed jobs, unlike `squeue`). Scoped to that job's original
+submitter or an mff-core admin - `403 { error: 'Not your job', ... }`
+otherwise, `404 { error: 'Unknown job', ... }` if `jobId` was never
+submitted through this API at all.
+
+### `POST /jobs/:jobId/cancel`
+
+Cancels a previously-submitted job by running `scancel <jobId>` (binary
+overridable via `SLURM_BIN_SCANCEL`). No request body. Same access checks,
+in the same order, as `GET /jobs/:jobId`: valid session, then the Slurm
+access gate (`403 { error: 'No Slurm access', ... }`), then ownership -
+the job's original submitter or an mff-core admin (`403 { error: 'Not your
+job', ... }`), `404 { error: 'Unknown job', ... }` if it was never
+submitted through this API.
+
+- Success: `200 { "jobId": 12345, "state": "CANCELLED" }` - this is the
+  requested outcome; Slurm may take a moment to update, so
+  `GET /jobs/:jobId` reports the real state afterwards.
+- Job already in a terminal state (`COMPLETED`, `FAILED`, `CANCELLED`,
+  `TIMEOUT`, `NODE_FAIL`, `OUT_OF_MEMORY`, `PREEMPTED`, `BOOT_FAIL`,
+  `DEADLINE`, `REVOKED`): `409 { "error": "Job already finished", "state":
+  "<state>" }`, and `scancel` is not run.
+- `scancel` (or the preceding `sacct` state lookup) fails:
+  `502 { "error": "Failed to cancel job", "message": "..." }`.
+
+No filesystem access is involved, consistent with this module never
+reading or writing `workDir`.

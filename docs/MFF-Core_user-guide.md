@@ -1,0 +1,49 @@
+# User Guide
+
+This guide walks end users through common tasks in the application.
+
+## Getting Started
+
+1. Navigate to the login page (/login)
+2. Enter your username and password
+3. If your account is inactive, contact an administrator to activate it
+4. If you forgot your password, use the "Forgot password?" link to request a reset
+
+## Dashboard
+
+After login, you are redirected to the dashboard.
+- Use the left panel to access your profile image and logos if available
+- Tabs available depend on your role and what's installed: Announcements, Tickets, Files, Collaboration, Search, Reports (staff/admin only), Feedback, and Setup (Preferences, Users/Groups management — admin only)
+
+## Preferences
+
+- Open Setup > Preferences
+- Choose logos and images from your uploaded files
+- Update theme, language, notifications, auto save, and default view
+- Changes are saved automatically for image selections; use Save button for other settings
+
+## Files
+
+- Upload files via the Files tab
+- Only certain file types are allowed (images, PDF, text)
+- After upload, files become available for selection in Preferences
+
+## Password Reset
+
+1. On the login page, click "Forgot password?"
+2. Enter your username; you will receive an email if your account exists
+3. Open the link and set a new password (valid for 30 minutes)
+
+## MFA (Multi-Factor Authentication)
+
+- Open Setup > Preferences > Security to enable Time-based One-Time Password (TOTP) yourself — no admin action is required to turn it on.
+- Scan the QR code in an authenticator app and enter a code to confirm setup. You'll be given 10 one-time recovery codes — save them somewhere safe; they let you log in if you lose access to your authenticator app.
+- Once enabled, logging in asks for a code from your authenticator app (or a recovery code, or an emailed one-time code) after your password.
+- You can regenerate recovery codes or disable MFA from the same Security section at any time.
+
+## Troubleshooting
+
+- 401 Unauthorized: Your session may have expired; log in again
+- File upload fails: Ensure file type and size are allowed
+- Preferences not updating: Try saving again or reloading the page
+- For more, see Troubleshooting guide (docs/MFF-Core_troubleshooting.md)

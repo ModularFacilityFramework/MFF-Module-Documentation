@@ -1,0 +1,41 @@
+# module.manifest.json schema
+
+The one file that makes a folder under `App_frontend/src/core/` a module: `App_backend/src/core/services/moduleLoader.js` (backend) and `App_frontend/src/core/moduleLoader.js` (frontend) both require it to exist at the module's root before doing anything else. This documents exactly what's actually read and enforced by that code today — not an aspirational schema, the real one.
+
+```json
+{
+  "id": "yourmodule",
+  "label": "Your Module",
+  "version": "1.4.2",
+  "tablePrefix": "yourmodule_",
+  "mountPath": "/yourmodule",
+  "backendEntry": "backend/index.js",
+  "frontendEntry": "frontend/index.js",
+  "requires": ["otherModuleId"],
+  "config": [
+    { "key": "API_TOKEN", "generate": "secret" },
+    { "key": "SOME_HOSTNAME", "required": true, "description": "What this value is for" }
+  ],
+  "pages": [
+    { "key": "run", "label": "Run" },
+    { "key": "results", "label": "Results" }
+  ]
+}
+```
+
+| Field | Enforced how | Notes |
+|---|---|---|
+| `id` | **Backend, hard requirement.** Must exactly match the folder name it's cloned into (`App_frontend/src/core/<id>/`) — a mismatch, a duplicate id across two folders, or the literal value `"example"` in a non-`example` folder (the template-never-customized case) all cause that module to be skipped, logged, and never registered. Also the id space `requires` uses, and the id `moduleDiscovery.js` reads from this same file to populate "Available to install" before your module is ever cloned. | Must match `^[a-z][a-z0-9_]*$` (same pattern the Install/Update routes validate). |
+| `label` | **Read live from this file for the "Available to install" list** (`moduleDiscovery.js` fetches `module.manifest.json` straight from your repo's GitHub API and uses this field) — but **not read from this file at all once installed**, on either side. | Once cloned, the backend's actual registered `label` comes from what your own `register(coreApi)` function returns (`{ router, moduleId, label }`), not from this JSON field — keep the two in sync yourself if you want them to match. |
+| `version` | **Backend, read verbatim.** `manifest.version \|\| '0.0.0'` — shown to admins exactly as written, no truncation, no combining with commit counts (that scheme existed once and was removed). | Bump it yourself, in a real commit, whenever you want the displayed version to change — core does nothing to it. |
+| `backendEntry` | **Backend, read and used.** `require(path.join(moduleDir, manifest.backendEntry))` — this path is genuinely configurable. | Its `register(coreApi)` export must return `{ router, moduleId, label }`, and `moduleId` must equal `manifest.id` exactly, or the module is skipped. |
+| `frontendEntry` | **Not read at all, on the frontend side.** The frontend loader hardcodes the path via a webpack `require.context` regex matching exactly `<folder>/frontend/index.js` — whatever this field says is ignored. | Your actual frontend entry point **must** physically be at `frontend/index.js`, regardless of what you put here. This is a real asymmetry with `backendEntry` (which *is* configurable) — worth knowing rather than assuming symmetry. |
+| `mountPath` | **Backend, read and used.** `app.use(\`${apiBasePath}${manifest.mountPath}\`, router)`. | Your own routes are reachable at `<apiBasePath><mountPath>/...`. |
+| `tablePrefix` | **Not read/enforced anywhere in code.** Only ever appears inside one error-message *string* (the stale-template-copy check), never as `manifest.tablePrefix` in actual logic. | Pure convention (see mff-core's own `CLAUDE.md`, "MFF architecture rules") — collisions are already structurally impossible since every module gets its own dedicated database. Follow it for your own internal consistency, not because core checks it. |
+| `requires` | **Backend, read and enforced.** Optional array of other modules' `id`s. Validated and normalized (`normalizeRequires()` in `moduleManifestFetcher.js`) the same way for an already-installed module (read from the local manifest at backend startup) and a not-yet-installed one (read via a shallow clone of the candidate repo, cached 10 minutes). | Must be a JSON array of non-empty strings if present at all (omit entirely if you have none — the common case). `"core"` and self-references are silently filtered, not errors — every module depends on core implicitly, and self-reference is meaningless. Enforced at Install (refused if any entry isn't already installed), Update (re-checked against the just-pulled manifest), and Remove (refused while any *other* installed module still declares you as a requirement — core determines this purely by reading every installed module's own declared list, never a hardcoded relationship). |
+| `config` | **Backend, read and acted on at Install and Update.** Optional array of `{ key, generate?, required?, description? }` — your declared non-database config keys (see `docs/MFF-Core_env-policy.md` for the mechanism these back). `ensureModuleConfig()` in `moduleConfigService.js` reads it right after your database is provisioned. | Two entry shapes, nothing else does anything: `{ key, generate: "secret" }` — core generates a random value itself (`crypto.randomBytes`) and writes it to `App_backend/.env` as `MODULE_<ID>_<KEY>`, only if that key isn't already set (never overwrites — safe to re-run on every Update). `{ key, required: true, description }` — core cannot supply this (a hostname, an external token, anything only a human knows); if unset, Install/Update's response names it and includes `description`, so the admin sees exactly what to add and why, instead of finding out later that the module silently doesn't work. An entry with neither `generate` nor `required` is accepted but ignored — purely documentary. Read your own values back via `coreApi.getModuleConfig()` (`docs/MFF-Core_module-core-api.md`), never a file — this field only controls what Install/Update *provisions*, not how your own code reads it back. |
+| `pages` | **Backend, read and used, optional.** Array of `{ key, label }` — the pages your module wants core to know about for per-page access control (Setup → Preferences → 🔐 Access). `moduleLoader.js` validates and registers it as `declaredPages` at load time; a missing/invalid `key` or a duplicate key is dropped and logged, never fatal — the rest of your manifest still loads. Omit entirely if your module has nothing worth restricting more finely than the whole module. | `key` must match `^[a-z][a-z0-9_]*$`. This is purely a declaration — it does not create routes or UI by itself. Use `coreApi.requirePage('run')` on your own backend routes to actually enforce one of these keys, and the per-caller `pages` field on `GET /api/modules` (`null` = unrestricted, else an array of allowed keys) on the frontend to decide which of your own tabs/routes to render. See `docs/MFF-Core_module-access.md`. |
+
+## Validation failure behavior
+
+A manifest that fails any of the *enforced* checks above (bad `id`, `requires` present but not an array, etc.) does not crash the backend or block any other module — `moduleLoader.js` catches the error per-module, logs `Skipped module at App_frontend/src/core/<folder>: <reason>`, and moves on. "A broken module must never break core" applies to a broken manifest the same as anything else.
