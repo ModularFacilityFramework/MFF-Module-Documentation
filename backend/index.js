@@ -4,13 +4,13 @@
 const express = require('express');
 const manifest = require('../module.manifest.json');
 const modulePool = require('./config/database');
-const buildExampleRouter = require('./routes/exampleRoutes');
+const buildDocumentationRouter = require('./routes/documentationRoutes');
 const buildPageAccessRouter = require('./routes/pageAccessRoutes');
 
 module.exports = function register(coreApi) {
   const moduleApi = { ...coreApi, pool: modulePool };
   const router = express.Router();
-  router.use(buildExampleRouter(moduleApi));
+  router.use(buildDocumentationRouter(moduleApi));
   router.use(buildPageAccessRouter(moduleApi));
   return {
     router,

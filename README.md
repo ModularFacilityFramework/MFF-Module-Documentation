@@ -1,45 +1,104 @@
-# MFF-Module-template
+# MFF-Module-Documentation
 
-Reusable starting point for an [MFF-core](../mff-core) feature module (chemicals inventory, SLURM monitoring, imaging, booking systems, etc.). Clone or copy this repo per new module, then rename it — see `docs/MFF-Module-template_module-manifest.md`.
+This repository is two things at once:
 
-## Why this exists
+1. **The single home of all MFF documentation** (Modular Facility Framework — React, Node.js/Express, MariaDB). Every document for MFF-core and for every MFF module lives in [`docs/`](docs/), and nowhere else.
+2. **An MFF module, id `documentation`** (label `Documentation`). For now it is only the renamed module scaffold with no features of its own; it is here so the module can later handle the documentation for everything.
 
-MFF-core's own architecture reserves `src/core/<moduleName>/` for modules, but gives no reusable starting point and no way to develop one without an mff-core checkout physically present. This template provides both:
-
-- A documented, versioned contract (`coreApi`, see `docs/MFF-Core_module-core-api.md`) — the *only* way a module talks to core, so this repo never needs an mff-core checkout open alongside it during development.
-- A local dev harness (`dev/`) that stands in for real core, so `npm run dev` works with nothing but this repo checked out.
-- Installing means `git clone`-ing this repo directly to `App_frontend/src/core/<id>/` inside a real mff-core checkout (see `docs/MFF-Core_module-database-provisioning.md`) — a real checkout, `git pull`ed in place to update, never a copy or symlink of one. That's mff-core's own decision (its Modules admin page, or a plain `git clone`), not something this repo needs any tooling for.
-
-## Quick start
-
-```bash
-nvm use
-npm install
-cp dev/.env.dev.example dev/.env.dev   # edit if your local MariaDB isn't localhost/root/no-password
-npm run dev:db:setup
-npm run dev
-```
-
-Backend harness on `http://localhost:4100`, frontend harness on `http://localhost:3000`. See `docs/MFF-Module-template_dev-setup.md`.
-
-## Structure
+## Layout
 
 ```
-module.manifest.json    # id, label, version, tablePrefix, mountPath - single source of truth
-backend/                 # this module's real Express router + own DB tables
-frontend/                 # this module's real React components
-dev/                       # local dev harness ONLY - never installed into core, see docs/MFF-Module-template_dev-setup.md
-docs/                       # symlink to mff-core's own docs/ (a shared space core and every
-                            # module link to) - this repo's own docs live there too, prefixed
-                            # MFF-Module-template_*.md: module-manifest.md, install.md,
-                            # dev-setup.md. coreApi/manifest-schema/UI-guide are core's own
-                            # MFF-Core_*.md files in that same shared folder, not duplicated here.
+docs/                    THE DOCUMENTATION - one Markdown file per topic, no subfolders
+module.manifest.json     module code: id, label, version, tablePrefix, mountPath
+backend/                 module code: Express router (index.js), routes/, config/, db/schema.sql
+frontend/                module code: React entry (index.js), components/, styles/
+package.json             module code: dependencies and scripts
+package-lock.json
+.eslintrc.json           module code: lint rules (no imports from an mff-core checkout)
+.nvmrc                   module code: Node version
+.githooks/               module code: optional pre-commit hook inherited from the template (not enabled by default)
+README.md                this file
 ```
 
-## Renaming this into a real module
+Rule of thumb: **everything under `docs/` is documentation; everything else at the root is the `documentation` module's code.** The two do not depend on each other — editing a document never touches the module, and the module does not read `docs/` yet.
 
-See `docs/MFF-Module-template_module-manifest.md`.
+## The documentation (`docs/`)
 
-## Installing into a real mff-core checkout
+`docs/` is a real folder in this repository. Every other MFF repository has a `docs` link that points at it (`../MFF-docs/docs`), which is why code and READMEs elsewhere refer to documents as `docs/<file name>`. For those links to resolve, this repository must be checked out in a folder named `MFF-docs`, next to the other MFF repositories.
 
-How installing/updating actually works is core's own mechanism — see `docs/MFF-Core_module-database-provisioning.md`. `docs/MFF-Module-template_install.md` only covers why this repo has no install script of its own.
+### File names
+
+Every document is a Markdown file directly in `docs/`. The prefix of the file name says what it documents and who owns its content:
+
+| File name | Documents | Content owned by |
+|---|---|---|
+| `MFF-Core_<topic>.md` | MFF-core | MFF-core |
+| `MFF-Module-<Name>_<topic>.md` | the module `<Name>` | that module |
+
+`MFF-Module_ABCFold_dev-setup.md` predates this pattern and keeps its name, because other repositories refer to it.
+
+Do not rename or delete a document without checking who refers to it: other repositories and code comments point at these files by name.
+
+### Index
+
+**MFF-core — using and running it**
+
+| File | Title |
+|---|---|
+| [`MFF-Core_user-guide.md`](docs/MFF-Core_user-guide.md) | User Guide |
+| [`MFF-Core_admin-guide.md`](docs/MFF-Core_admin-guide.md) | Administrator Guide |
+| [`MFF-Core_configuration.md`](docs/MFF-Core_configuration.md) | Configuration Management |
+| [`MFF-Core_env-policy.md`](docs/MFF-Core_env-policy.md) | Environment variable policy — the one `.env` rule |
+| [`MFF-Core_predetermined-mode.md`](docs/MFF-Core_predetermined-mode.md) | Predetermined deployment mode |
+| [`MFF-Core_backup-recovery.md`](docs/MFF-Core_backup-recovery.md) | Backup and Recovery |
+| [`MFF-Core_troubleshooting.md`](docs/MFF-Core_troubleshooting.md) | Troubleshooting Guide |
+
+**MFF-core — developing it**
+
+| File | Title |
+|---|---|
+| [`MFF-Core_dev-setup.md`](docs/MFF-Core_dev-setup.md) | Developer Setup Guide |
+| [`MFF-Core_api.md`](docs/MFF-Core_api.md) | API Documentation |
+| [`MFF-Core_db-schema.md`](docs/MFF-Core_db-schema.md) | Database Schema and Relationships |
+| [`MFF-Core_release-process.md`](docs/MFF-Core_release-process.md) | Release Process and Versioning |
+| [`MFF-Core_tasks.md`](docs/MFF-Core_tasks.md) | Tasks |
+
+**MFF-core — the contract with modules**
+
+| File | Title |
+|---|---|
+| [`MFF-Core_module-core-api.md`](docs/MFF-Core_module-core-api.md) | What core actually gives a module (`coreApi`) |
+| [`MFF-Core_module-manifest.md`](docs/MFF-Core_module-manifest.md) | `module.manifest.json` schema |
+| [`MFF-Core_module-database-provisioning.md`](docs/MFF-Core_module-database-provisioning.md) | Module Database Provisioning |
+| [`MFF-Core_module-install-finalize.md`](docs/MFF-Core_module-install-finalize.md) | Module Install / Update / Remove — automatic rebuild and restart |
+| [`MFF-Core_module-access.md`](docs/MFF-Core_module-access.md) | Module access — who can see and use an installed module (and one page within it) |
+| [`MFF-Core_module-ui-guide.md`](docs/MFF-Core_module-ui-guide.md) | Module UI Guide |
+
+**Module template**
+
+| File | Title |
+|---|---|
+| [`MFF-Module-template_dev-setup.md`](docs/MFF-Module-template_dev-setup.md) | Dev setup |
+| [`MFF-Module-template_install.md`](docs/MFF-Module-template_install.md) | Why there's no install script in this repo |
+| [`MFF-Module-template_module-manifest.md`](docs/MFF-Module-template_module-manifest.md) | Renaming this template into a real module |
+
+**Individual modules**
+
+| File | Title |
+|---|---|
+| [`MFF-Module_ABCFold_dev-setup.md`](docs/MFF-Module_ABCFold_dev-setup.md) | ABCFold — Dev setup |
+| [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
+| [`MFF-Module-Pandda2Inspect_config.md`](docs/MFF-Module-Pandda2Inspect_config.md) | pandda2inspect module configuration |
+| [`MFF-Module-SLURM_slurm-config.md`](docs/MFF-Module-SLURM_slurm-config.md) | SLURM module configuration |
+
+## The module (`documentation`)
+
+Everything outside `docs/` is the scaffold from MFF-Module-template, renamed to module `documentation`:
+
+- `module.manifest.json` — id `documentation`, label `Documentation`, table prefix `documentation_`, mounted at `/documentation`. The schema of this file is core's contract: see [`docs/MFF-Core_module-manifest.md`](docs/MFF-Core_module-manifest.md).
+- `backend/` — the module's Express router and its own tables (`documentation_things`, `documentation_page_access` in `backend/db/schema.sql`). `documentationRoutes.js` and the Overview tab are still the template's placeholder example, to be replaced when the module gets real features; `pageAccessRoutes.js` / `PageAccessTab.js` are the template's reusable per-role page-access pattern.
+- `frontend/` — the module's React entry point and components.
+
+The module talks to MFF-core only through `coreApi` — see [`docs/MFF-Core_module-core-api.md`](docs/MFF-Core_module-core-api.md). How a module is installed into an MFF-core checkout is core's own mechanism — see [`docs/MFF-Core_module-database-provisioning.md`](docs/MFF-Core_module-database-provisioning.md).
+
+Known gap: the `dev`, `dev:*` and `lint` scripts in `package.json` refer to a `dev/` harness folder that was not part of the template copy this repository was created from, so they do not run here as they stand.
