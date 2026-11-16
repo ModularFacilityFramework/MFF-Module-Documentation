@@ -24,7 +24,7 @@ The admin page shows progress (with the build log) and reloads itself when the b
 
 The backend restarts itself by exiting, so the process must be restarted by something. It only does this when it can verify, at that moment, that it is a **systemd system service whose unit has `Restart=always`** (checked from `/proc/self/cgroup` and `systemctl show <unit> -p Restart`; the unit name is detected, not configured — `SYSTEMD_SERVICE_NAME` is not needed). `services/mff-backend-prod.service.example` already has `Restart=always`, so a unit created from it works.
 
-If it can't verify that (run from a terminal, a different restart policy such as `on-failure`, a user service), it **never exits** — exiting would just kill the backend. The job instead finishes as `needs_manual_restart`: the frontend is already rebuilt and swapped, and the page shows the one command to run (`sudo systemctl restart <SYSTEMD_SERVICE_NAME>`). To get full automation on such a deployment, set `Restart=always` in its unit and `sudo systemctl daemon-reload`.
+If it can't verify that (run from a terminal, a different restart policy such as `on-failure`, a user service), it **never exits** — exiting would just kill the backend. The job instead finishes as `needs_manual_restart`: the frontend is already rebuilt and swapped, and the page shows the one command to run (`sudo systemctl restart <SYSTEMD_SERVICE_NAME>`; `SYSTEMD_SERVICE_NAME` defaults to `mff-core-backend.service`). To get full automation on such a deployment, set `Restart=always` in its unit and `sudo systemctl daemon-reload`.
 
 ## State and recovery
 

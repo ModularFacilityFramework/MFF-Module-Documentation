@@ -57,8 +57,8 @@ Auth & Security
 
 Modules
 - `DB_PROVISION_USER`, `DB_PROVISION_PASSWORD` (secret) — the provisioning account that creates each module's database and user. Leave unset if you don't plan to install modules. See `docs/MFF-Core_module-database-provisioning.md`.
-- `GITHUB_TOKEN` (secret) — GitHub access token; see `App_backend/.env.example`.
-- `SYSTEMD_SERVICE_NAME` — name of the systemd unit that runs the backend. Auto-restart after a module Install/Update does not need it (the unit name is detected); see `docs/MFF-Core_module-install-finalize.md`.
+- `GITHUB_TOKEN` (secret, optional) — a GitHub token sent as a Bearer header to the GitHub API so core can list and read the manifests of the module repos in the private module organisation. It feeds the "Available to install" list in Preferences → Modules (cached for 10 minutes). Without it the rest of core works, and that list returns the error "GITHUB_TOKEN is not set in .env". A fine-grained, read-only token (Contents + Metadata) on the module organisation's repos is enough. Never commit it.
+- `SYSTEMD_SERVICE_NAME` (default `mff-core-backend.service`) — the systemd unit name used only in the manual restart command (`sudo systemctl restart <SYSTEMD_SERVICE_NAME>`) shown when the backend cannot restart itself after a module Install/Update/Remove (status `needs_manual_restart`). The automatic restart does not use it (it detects the unit). Set it to the real unit name if it is not the default; the installer writes it. See `docs/MFF-Core_module-install-finalize.md`.
 - `MODULE_<ID>_*` — per-module values (module id upper-cased), added to this same `.env`, either by an admin or written by core itself (for example `MODULE_<ID>_DB_HOST`/`_USER`/`_PASSWORD`/`_NAME`). A module reads its own namespace through `coreApi.getModuleConfig()`. See `docs/MFF-Core_env-policy.md`.
 
 ## Secrets Management
