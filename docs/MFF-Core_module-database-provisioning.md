@@ -35,6 +35,8 @@ Once per deployment, never per module. Install/Update/Reset then need no databas
    ```
    It asks for `sudo` (same as `setup-database.js`). It is idempotent, and it never changes the password of an account that already exists.
 
+If you install with the installer (`scripts/install.sh`, see `docs/MFF-Core_dev-setup.md`, "Install with the installer"), it runs `setup-provisioner.js` for you when you answer yes to modules. The provisioner user name must still be distinct per deployment on a shared MariaDB server (see step 1).
+
 What the script sets up:
 - The provisioning account, for both `127.0.0.1` and `localhost` (MariaDB grant-matches against the *resolved* peer hostname, so a TCP connection to `127.0.0.1` is commonly matched as `localhost`).
 - A database `mff_provisioning` holding one stored procedure, `grant_module_db(db, host)`, defined by root with `SQL SECURITY DEFINER`. It performs the single `GRANT ALL PRIVILEGES ON mff_module_<id>.* TO mff_module_<id>@host` and refuses any name that isn't `mff_module_<id>`.

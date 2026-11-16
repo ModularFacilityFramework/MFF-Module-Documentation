@@ -7,6 +7,26 @@ This guide describes how to set up a development environment for the application
 - MariaDB/MySQL server for backend database.
 - Git and a POSIX shell (macOS/Linux or WSL).
 
+## Install with the installer
+On Debian 12/13, as a normal user with `sudo`, run:
+```bash
+bash scripts/install.sh
+```
+The installer:
+- Installs git, curl and openssl, nvm and Node 20, MariaDB, and Apache (and enables `proxy`, `proxy_http`, `headers`, `ssl` and `rewrite`).
+- Asks plain-English questions: the sub-folder (e.g. `/MFF-cloud`), the public origin, mail, whether you want modules (yes/no), and whether to write the Apache rules into an existing config or a separate site file.
+- Generates `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `DATA_ENCRYPTION_KEY`. It makes you confirm that you backed up the encryption key.
+- Writes `App_backend/.env` with mode `0600`. An existing `.env` is kept as `.env.bak-<time>`, and keys the installer does not manage (such as `MODULE_<ID>_DB_*`) are preserved.
+- Runs `setup-database.js`, then `setup-provisioner.js` (only if you want modules), then `create-admin-user.js`.
+- Runs `npm ci` for the backend and the frontend, then `npm run build`.
+- Writes the systemd unit and the Apache config (it runs the Apache configtest first, then reloads), and ends with health checks.
+
+It is safe to re-run: the secrets and the database are kept.
+
+Flags: `--dry-run`, `--yes`, `--answers FILE` (a template is in `scripts/installer/answers.example`), `--stage-dir DIR`, `--skip-packages`, `--skip-database`, `--skip-admin`, `--skip-npm`, `--skip-build`, `--no-start`.
+
+The manual steps below remain as the fallback.
+
 ## First-time setup
 1. Clone the repository and enter the project root.
 2. Run the automated bootstrap:
