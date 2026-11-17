@@ -14,12 +14,17 @@ bash scripts/install.sh
 ```
 The installer:
 - Installs git, curl and openssl, nvm and Node 20, MariaDB, and Apache (and enables `proxy`, `proxy_http`, `headers`, `ssl` and `rewrite`).
-- Asks plain-English questions: the sub-folder (e.g. `/MFF-cloud`), the public origin, mail, whether you want modules (yes/no), and whether to write the Apache rules into an existing config or a separate site file.
+- Asks plain-English questions: the sub-folder (e.g. `/MFF-cloud`), the public origin, mail, and whether to write the Apache rules into an existing config or a separate site file.
 - Generates `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `DATA_ENCRYPTION_KEY`. It makes you confirm that you backed up the encryption key.
-- Writes `App_backend/.env` with mode `0600`. An existing `.env` is kept as `.env.bak-<time>`, and keys the installer does not manage (such as `MODULE_<ID>_DB_*`) are preserved.
-- Runs `setup-database.js`, then `setup-provisioner.js` (only if you want modules), then `create-admin-user.js`.
-- Runs `npm ci` for the backend and the frontend, then `npm run build`.
+- Writes `App_backend/.env` with mode `0600`. An existing `.env` is kept as `.env.bak-<time>`, and keys the installer does not manage are preserved.
+- Runs `npm ci` for the backend and the frontend.
+- Runs `setup-database.js`, then `create-admin-user.js`.
+- Runs `npm run build`.
 - Writes the systemd unit and the Apache config (it runs the Apache configtest first, then reloads), and ends with health checks.
+
+In order, the steps are: tools, nvm/Node 20, MariaDB + Apache, `.env`, `npm ci`, `setup-database.js`, admin user, build, systemd unit, Apache rules, checks.
+
+The installer does not set up modules: it does not ask whether you want modules, the provisioner account, `GITHUB_TOKEN` or `WORKSPACE_BASE_DIR`, and it does not run `setup-provisioner.js`. On a re-run it leaves any `DB_PROVISION_*`, `GITHUB_TOKEN`, `WORKSPACE_BASE_DIR` and `MODULE_<ID>_*` lines in an existing `.env` untouched, and it never writes them on a fresh install. To use modules, follow "After install: modules" below.
 
 It is safe to re-run: the secrets and the database are kept.
 
@@ -48,6 +53,25 @@ The manual steps below remain as the fallback.
    node setup-database.js
    node create-admin-user.js
    ```
+
+## After install: modules
+Modules are set up by hand, once the core is installed (with the installer or the manual steps above). The details of what the provisioning account does are in `docs/MFF-Core_module-database-provisioning.md`.
+
+1. Add these to `App_backend/.env`:
+   - `DB_PROVISION_USER` — e.g. `mff_provisioner`. It must be distinct per deployment on a shared MariaDB server.
+   - `DB_PROVISION_PASSWORD` — generate it with `openssl rand -base64 24`. It must not contain `'`, a backslash or a newline.
+   - `GITHUB_TOKEN` — optional (see `docs/MFF-Core_configuration.md`).
+   - `WORKSPACE_BASE_DIR` — only needed for cluster modules.
+2. Once per deployment, run:
+   ```bash
+   cd App_backend/install && nvm exec 20 node setup-provisioner.js
+   ```
+   It asks for `sudo`. Its self-test creates and then drops a scratch module database.
+3. From the repo root, restart the backend:
+   ```bash
+   npm run restart-backend
+   ```
+4. In the app, as an administrator, open Preferences → Modules and use Install.
 
 ## Running locally
 - Backend API:
