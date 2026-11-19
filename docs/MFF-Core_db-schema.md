@@ -21,10 +21,10 @@ Seeded roles: `developer` (break-glass superuser, see `SUPERUSER_ROLE` in `.env`
 - archived_at TIMESTAMP NULL
 
 ### setup_job_positions
-- id
-- name UNIQUE
-- sort_order
-- created_at
+- id BIGINT AUTO_INCREMENT PK
+- name VARCHAR(100) NOT NULL UNIQUE
+- sort_order INT NOT NULL DEFAULT 0
+- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 Seeded with: PhD student, Master student, PI, Staff, Postdoc, Senior Postdoc, RA, SRA, Technician, SO, SSO, Other. Created and seeded automatically at startup on an existing deployment.
 

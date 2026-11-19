@@ -20,6 +20,16 @@ The admin page shows progress (with the build log) and reloads itself when the b
 - **Fixed commands only.** Nothing from a request or config value is ever part of a command.
 - **Non-production** (`NODE_ENV` not `production`): the production build is skipped (the dev server handles the frontend); only the restart happens.
 
+## Install and Update never leave tracked files modified
+
+- **Dependencies:** Install and Update install a module's dependencies with `npm ci --omit=dev --omit=peer`, so the module's committed `package-lock.json` is never rewritten. If the lockfile does not match `package.json`, or there is none, `npm install --omit=dev --omit=peer --no-package-lock` is used instead and a warning is shown. Module maintainers: commit a correct `package-lock.json` (`npm ci` requires it to match `package.json`).
+- **Hiding an installed module from core's git:** core hides an installed module's folder (`App_frontend/src/core/<id>/`) through its own `.git/info/exclude`, **not** by editing the tracked `.gitignore`.
+- **Update repairs a dirty checkout first** (left over from earlier installs):
+  - It restores `package-lock.json`. The discarded change is saved as `backups/modules/<id>/discarded-package-lock.json-<ts>.patch`.
+  - It moves module lines out of core's tracked `.gitignore` into `.git/info/exclude` (this also happens at backend startup).
+  - Any other modified tracked file in the module folder stops the Update with a message. Nothing is discarded.
+- **Git cleanliness check:** after Install/Update, `git status --porcelain` is checked for the module folder and for core. The result is in the response (`gitCheck`), in the job log, and in `GET /modules-management/job` as `job.gitCheck`: `{ clean, module: { entries }, core: { entries }, message }`.
+
 ## The one requirement: `Restart=always`
 
 The backend restarts itself by exiting, so the process must be restarted by something. It only does this when it can verify, at that moment, that it is a **systemd system service whose unit has `Restart=always`** (checked from `/proc/self/cgroup` and `systemctl show <unit> -p Restart`; the unit name is detected, not configured — `SYSTEMD_SERVICE_NAME` is not needed). `services/mff-backend-prod.service.example` already has `Restart=always`, so a unit created from it works.
