@@ -15,6 +15,9 @@ After login, you are redirected to the dashboard.
 - Use the left panel to access your profile image and logos if available
 - Tabs available depend on your role and what's installed: Announcements, Tickets, Files, Collaboration, Search, Reports (staff/admin only), Feedback, and Setup (Preferences, Users/Groups management — admin only)
 
+- Users & Groups has a "Statistics" tab with two pie charts: Groups Distribution and Job Roles Distribution. Click a group's slice to filter the Job Roles pie to that group; click it again, or press Reset, to show everyone.
+- The Users edit form has a "Job position" select.
+
 ## Preferences
 
 - Open Setup > Preferences

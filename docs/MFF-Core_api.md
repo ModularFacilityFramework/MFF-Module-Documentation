@@ -80,6 +80,7 @@ GET /users
 - Access: Protected, `administrator` only
 - Query (optional): `page`, `limit`, `sortBy`, `sortDir`, `search`
 - Response (paginated): `{ success, items, total, page, pages, limit }` — each item includes `roles: [{ role }]`
+- Each user also includes `job_position_id` and `job_position`.
 - Response (unpaginated/legacy): `{ success, users }`
 
 GET /users/:id
@@ -88,7 +89,12 @@ GET /users/:id
 
 PUT /users/:id
 - Access: Protected, `developer` or `administrator`
-- Body: any subset of the user's profile fields (`first_name`, `last_name`, `email`, `university`, `company`, `faculty`, `institute`, `building`, `room`, `phone_number`, `profile_link`, `photo_link`, `linkedin_link`, `group_website`, `group_id`, `status`)
+- Body: any subset of the user's profile fields (`first_name`, `last_name`, `email`, `university`, `company`, `faculty`, `institute`, `building`, `room`, `phone_number`, `profile_link`, `photo_link`, `linkedin_link`, `group_website`, `group_id`, `status`, `job_position_id`)
+- `job_position_id`: a valid job position id, or `''`/`null` to clear it. An unknown id is a `400` with "Unknown job position".
+
+GET /users/job-positions
+- Access: Protected (any logged-in user)
+- Response: `{ success, jobPositions: [{ id, name }] }`
 
 PUT /users/:id/status
 - Access: Protected, `administrator` only
@@ -224,6 +230,8 @@ DELETE /files/:id/roles/:role
 
 - `GET /reports/users-summary` — Protected, `administrator` only — counts by status and by role
 - `GET /reports/files-summary` — Protected, `administrator` only — counts/total size by file type, and uploads per day (last 30 days)
+- `GET /reports/groups-distribution` — Protected, `facility_staff`, `facility_manager`, `administrator` or `developer` — chart shape (see `docs/MFF-Core_module-core-api.md`, "Charts: the shared drill-down pie"): members per group. Users without a group are "No group".
+- `GET /reports/job-roles-distribution?groupId=` — same roles — chart shape: **active** users per job position, "Not set" for none. `groupId` omitted = everyone; `groupId=0` = users with no group; a non-integer or negative value is a `400`.
 - `GET /reports/:name.csv` — Protected, `administrator` only — CSV export; `name` must be `users` or `files`
 
 ## Search (`/search`)

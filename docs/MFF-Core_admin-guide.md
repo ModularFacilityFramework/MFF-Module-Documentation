@@ -15,6 +15,10 @@ This guide explains how administrators manage users, roles, and system configura
 - Find the user and update their status to Active/Inactive
 - The user receives an email notification on status change
 
+### Job positions and statistics
+- The Users edit form has a "Job position" select. Positions come from the `setup_job_positions` table (see `docs/MFF-Core_db-schema.md`).
+- Users & Groups has a "Statistics" tab: Groups Distribution and Job Roles Distribution. Click a group slice to filter the Job Roles pie; click it again, or press Reset, to show everyone.
+
 ### Roles
 - Role assignments are stored in `setup_user_roles` (a `role_id` foreign key into `setup_roles` — not a free-text column)
 - `administrator` is the default elevated role; `developer` acts as a break-glass superuser, bypassing all `checkRole()` checks (configured via `SUPERUSER_ROLE` in `.env` — empty by default)

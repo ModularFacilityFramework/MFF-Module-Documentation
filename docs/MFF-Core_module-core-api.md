@@ -17,6 +17,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
     getModuleConfig,                      // () => Record<string, string> - see below
+    toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
     apiBasePath,                          // e.g. "/mff-api" - the prefix your own routes are mounted under
     config: {
         apiBasePath, appName, bannerTitle, superuserRole, nodeEnv
@@ -133,7 +134,8 @@ You get core's raw connection pool because some things (like the two functions a
     useRoles,                                  // (userData) => { roles: string[], hasRole, hasAnyRole, hasAllRoles, canManageUsers } - see "The current user's roles"
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
     getAllRoles,                               // () => Promise<string[]>
-    getAllUsers                                // (params) => Promise<{success, items, total, page, pages, limit}>
+    getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
+    DrillDownPie, fetchSlices, normalizeSlices // the shared pie chart - see "Charts: the shared drill-down pie"
 }
 ```
 
@@ -251,6 +253,52 @@ const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME } = coreApi.getModuleConfig();
 One core-defined config key, not declared in a module's own `module.manifest.json` `config` array (that array is for a module's *own* needs — this one is an admin's UI-layout preference, core's business, not the module's). Set `MODULE_<ID>_DASHBOARD_POSITION=<number>` in `App_backend/.env` and it overrides whatever `position` a module's own `registerDashboardTab()` call hardcoded, per deployment, with zero module-code change.
 
 Read once at startup by `moduleLoader.js` (via `getModuleConfig()`, same as anything else), stored on the in-memory module registry, and returned as `dashboardPosition` in every `/api/modules` entry. `Dashboard.js` uses it ahead of the module's own default when present. A module doesn't read or act on this itself — it flows entirely through core, from `App_backend/.env` to the tab bar's own sort.
+
+## Charts: the shared drill-down pie
+
+A module never copies a pie chart, it receives one from core.
+
+Frontend:
+
+```jsx
+const { DrillDownPie, fetchSlices } = coreApi;
+
+<DrillDownPie
+  title="Spend by supplier"
+  loadData={() => fetchSlices(coreApi.api, '/finance/stats/by-supplier', { year })}
+  reloadKey={year}
+  drillDown
+/>
+```
+
+**Slice shape:** `{ key, name, value, color?, children?, meta? }`. `value` must be > 0; zero and negative slices are dropped.
+
+**Props:**
+- `title`.
+- `data` (a static array) **or** `loadData(path)` → slices. `path` is the list of slices drilled into so far; one function serves every level.
+- `reloadKey` — change it to reload.
+- `drillDown` — `true`, or `(slice, path) => bool`. A click goes into the slice's `children`, or calls `loadData([...path, slice])`.
+- Linked mode: `onSelect(slice|null)` and an optional `selectedKey`. A click selects a slice, a second click clears it, and Reset clears it. This is used to let one pie filter another pie or a table.
+- `onSliceClick(slice, path)`, `onReset()`, `rootLabel`, `colors`, `theme`, `height`, `outerRadius`, `innerRadius` (makes it a donut), `valueFormatter(v)`, `emptyText`, `loadingText`, `showLegend`, `showLabels`, and `testId` (default `'drilldown-pie'`).
+
+**States:** loading, error (shows the message from the failed request), and empty. There is a tooltip on hover/focus, keyboard support (Enter/Space), and a breadcrumb while drilled in.
+
+**Theming:** the CSS variables `--mff-chart-text`, `--mff-chart-muted`, `--mff-chart-border`, `--mff-chart-bg`, `--mff-chart-tooltip-bg`, `--mff-chart-tooltip-text` and `--mff-chart-error`, or the `theme` prop.
+
+Also available: `coreApi.normalizeSlices(responseBodyOrArray)`.
+
+**Library choice:** plain SVG, no chart library — no new dependency or vulnerability surface, identical in the browser and in jsdom tests, small bundle.
+
+**Backend data shape:** GET endpoints return `{ success: true, data: [ { key, name, value, meta? } ] }`. Build it with:
+
+```js
+coreApi.chartResponse(rows, {
+  key: 'supplier_id', name: 'supplier_name', value: 'total',
+  unknownName: 'Unknown', meta: [...], sort: true
+})
+```
+
+or use `coreApi.toChartSlices(rows, map)` for the bare array. Numbers and BigInt are normalised, missing names become `unknownName`, zero values are dropped, and the biggest slice comes first.
 
 ## Why nothing here is duplicated
 

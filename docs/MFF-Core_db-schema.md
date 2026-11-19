@@ -20,6 +20,14 @@ Seeded roles: `developer` (break-glass superuser, see `SUPERUSER_ROLE` in `.env`
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - archived_at TIMESTAMP NULL
 
+### setup_job_positions
+- id
+- name UNIQUE
+- sort_order
+- created_at
+
+Seeded with: PhD student, Master student, PI, Staff, Postdoc, Senior Postdoc, RA, SRA, Technician, SO, SSO, Other. Created and seeded automatically at startup on an existing deployment.
+
 ### setup_users
 - id BIGINT PK
 - username VARCHAR(50) NOT NULL UNIQUE
@@ -41,6 +49,7 @@ Seeded roles: `developer` (break-glass superuser, see `SUPERUSER_ROLE` in `.env`
 - status ENUM('active','inactive') DEFAULT 'inactive'
 - notes TEXT NULL
 - group_id BIGINT NULL REFERENCES setup_groups(id) ON DELETE SET NULL
+- job_position_id BIGINT NULL REFERENCES setup_job_positions(id) ON DELETE SET NULL (added automatically at startup on an existing deployment)
 - totp_secret VARCHAR(255) NULL
 - totp_enabled TINYINT(1) NOT NULL DEFAULT 0
 - last_login TIMESTAMP NULL
@@ -232,6 +241,7 @@ Indexes: `idx_user_id (user_id)`, `idx_token (token)`.
 ```
 setup_users 1─* setup_user_roles *─1 setup_roles
 setup_users *─1 setup_groups
+setup_users *─1 setup_job_positions
 setup_users 1─1 setup_user_preferences
 setup_users 1─* setup_password_resets
 setup_users 1─1 setup_mfa_setup_pending
