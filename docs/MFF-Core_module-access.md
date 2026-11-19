@@ -11,6 +11,8 @@ The exact same model also applies *inside* a module, to one of its own declared 
 - A user belongs to exactly one group today, so "group access" means users whose group is granted.
 - Any one match is enough (role OR group OR user). Page/tab access for *core* pages by role is still Setup → Preferences → 🔐 Access → Core - same `developer`/`administrator`/`SUPERUSER_ROLE` always-allowed rule as above (fixed to match: it used to only bypass for `developer`).
 
+A user's grant on a module decides what they can **open**, not what other modules may use. A module that lists another module in its manifest `"requires"` may call it on behalf of any user who may use the *caller*, even if that user has no grant on the target; the user still cannot open the target directly. See `docs/MFF-Core_module-core-api.md`, "Calling a module you depend on".
+
 ## Where it is stored
 
 `setup_module_access (module_id, subject_type 'user'|'group', subject_id)` for users and groups, and `setup_module_access_roles (module_id, role_id → setup_roles)` for roles, both in core's database. A grant for a user or group that is later deleted is harmless: it can no longer match anyone.
@@ -23,7 +25,7 @@ Existing deployments: after pulling this change, run **Setup → Preferences →
 
 Both come from `App_backend/src/core/services/moduleAccessService.js`:
 
-1. **The module's API** — `moduleLoader.js` mounts an access gate in front of every module's router. An unrestricted module passes straight through (its own public routes still work). A restricted module requires a login and answers `404` to anyone not granted.
+1. **The module's API** — `moduleLoader.js` mounts an access gate in front of every module's router. An unrestricted module passes straight through, but **every module request needs a login, except the routes the module lists in `publicRoutes` in its manifest** (`docs/MFF-Core_module-manifest.md`). A restricted module answers `404` to anyone not granted.
 2. **The UI** — `GET /api/modules` is filtered per caller (it accepts an optional token and never answers 401; logged out, it returns the full list as before). The frontend builds the sidebar, Dashboard tabs and routes from that one list, so a hidden module vanishes everywhere. The list is re-fetched on login/logout.
 
 A Dashboard tab remembered from an earlier visit, or requested with `?tab=`, that the user can no longer see quietly falls back to their first tab.
