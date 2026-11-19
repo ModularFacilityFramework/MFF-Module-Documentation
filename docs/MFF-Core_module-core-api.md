@@ -133,7 +133,7 @@ const result = await coreApi.callModuleAsUser(
     'slurm',                       // target module id; must be in this module's manifest "requires"
     'GET',
     '/external/resource-profile',  // relative to the target's mountPath
-    { params: { gpuCount: 2 }, body: undefined, timeoutMs: 15000 }
+    { params: { gpuCount: 2 }, timeoutMs: 15000 }   // optional
 );
 // result = { ok, status, data, error }
 // or, when core refuses:
@@ -143,6 +143,7 @@ const ws = await coreApi.getUserWorkspacePathForUserId(userId);
 // ws = { active, path, reason }
 ```
 
+- **`opts`** is the same as for `callModule` and nothing else: `params` (an object, sent as the query string), `body` (any JSON-serialisable value, sent as JSON) and `timeoutMs` (default 15000).
 - **Never throws.** Same convention as `callModule`.
 - **`reason` on a refusal** (`refused: true`) is one of:
   - `not_declared`: the calling module's manifest lacks `actsAsUsers`.

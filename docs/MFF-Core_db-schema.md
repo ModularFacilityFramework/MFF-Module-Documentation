@@ -252,15 +252,19 @@ Roles allowed to access a given file, in addition to its owner and admins/develo
 Indexes: `idx_user_id (user_id)`, `idx_token (token)`.
 
 ### core_module_background_audit
-One row per `coreApi.callModuleAsUser` call, allowed or refused (`docs/MFF-Core_module-core-api.md`, "Background identity"). Kept 180 days. Created at backend startup on existing deployments, and also in `schema.sql`.
-- module_id: the calling module
-- target_id: the module called
-- user_id: the user acted as
-- method
-- path: without the query string
-- outcome: `ok`, `failed` or `refused`
-- reason: why a call was refused
-- status: the HTTP status
+One row per `coreApi.callModuleAsUser` call and per `coreApi.getUserWorkspacePathForUserId` call, allowed or refused (`docs/MFF-Core_module-core-api.md`, "Background identity"). Kept 180 days. Created at backend startup on existing deployments, and also in `schema.sql`.
+- id BIGINT AUTO_INCREMENT PK
+- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- module_id VARCHAR(64) NOT NULL (the calling module)
+- target_id VARCHAR(64) NULL (the module called; NULL for workspace checks)
+- user_id BIGINT NULL (the user acted as; no foreign key, because the record outlives the user)
+- method VARCHAR(16) NOT NULL (the HTTP method, or `WORKSPACE` for `getUserWorkspacePathForUserId`)
+- path VARCHAR(255) NULL (no query string)
+- outcome ENUM('ok','failed','refused') NOT NULL
+- reason VARCHAR(64) NULL (the refusal reason, or the target's error text for `failed`)
+- status INT NULL (the HTTP status from the target)
+
+Indexes: `idx_bg_audit_created (created_at)`, `idx_bg_audit_module (module_id, created_at)`, `idx_bg_audit_user (user_id, created_at)`.
 
 ## ERD (conceptual)
 
