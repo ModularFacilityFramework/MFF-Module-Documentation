@@ -57,7 +57,7 @@ Users and groups are core's: every user/group column (`pi_user_id`, `phd_student
 
 ## Config
 
-Module-specific config key: `MODULE_FINANCE_FILES_DIR` (root folder of the requisition PDFs; see `MFF-Module-Finance_api-and-config.md`). Database credentials: `MODULE_FINANCE_DB_*` in core's `App_backend/.env`,
+Module-specific config key: `MODULE_FINANCE_FILES_DIR` (optional; root folder of the requisition PDFs, with a default; see `MFF-Module-Finance_api-and-config.md`). Database credentials: `MODULE_FINANCE_DB_*` in core's `App_backend/.env`,
 read through `coreApi.getModuleConfig()`.
 
 ## Status
