@@ -69,7 +69,7 @@ This is why Install can safely be retried via Update after a database-provisioni
 
 ## What Reset does
 
-`POST /modules-management/:id/reset` (same routes file, `resetModuleDatabase()` in `moduleDatabaseProvisioner.js`) recovers a module that's stuck partway through Install — cloned, but `npm install` or database provisioning then failed, leaving a folder (and sometimes a half-provisioned database) behind with nothing registered for it. It's only offered in the UI for a module in exactly that state (`alreadyCloned` but not in `/api/modules`) — refused outright (409) for a currently active, registered module, since that's what Remove (below) is for instead.
+`POST /modules-management/:id/reset` (same routes file, `resetModuleDatabase()` in `moduleDatabaseProvisioner.js`) recovers a module that's stuck partway through Install — cloned, but the dependency install (`npm ci`, or the no-lockfile `npm install --no-package-lock` fallback) or the database step then failed, leaving a folder (and sometimes a half-provisioned database) behind with nothing registered for it. It's only offered in the UI for a module in exactly that state (`alreadyCloned` but not in `/api/modules`) — refused outright (409) for a currently active, registered module, since that's what Remove (below) is for instead.
 
 1. **Does `App_backend/.env` have working `MODULE_<ID>_DB_*` credentials for this module?** Yes → back it up the same way Update does, then continue. No (orphaned, or never got that far) → nothing to back up, continue anyway.
 2. `DROP DATABASE IF EXISTS` / `DROP USER IF EXISTS` via the `DB_PROVISION_USER` admin account — safe no-ops if either never existed.
