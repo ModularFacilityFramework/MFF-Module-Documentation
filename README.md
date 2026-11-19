@@ -88,6 +88,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 |---|---|
 | [`MFF-Module_ABCFold_dev-setup.md`](docs/MFF-Module_ABCFold_dev-setup.md) | ABCFold — Dev setup |
 | [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
+| [`MFF-Module-Finance_overview.md`](docs/MFF-Module-Finance_overview.md) | Finance module (`finance`) |
 | [`MFF-Module-Pandda2Inspect_config.md`](docs/MFF-Module-Pandda2Inspect_config.md) | pandda2inspect module configuration |
 | [`MFF-Module-SLURM_slurm-config.md`](docs/MFF-Module-SLURM_slurm-config.md) | SLURM module configuration |
 
