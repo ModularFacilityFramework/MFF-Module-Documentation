@@ -253,18 +253,19 @@ Who may open the module at all remains core's decision (Modules → Access); thi
 ### `useModuleAccess(moduleId)` — core's own version of the pattern above
 
 ```js
-const { loading, visible, pages } = coreApi.useModuleAccess('yourmodule');
+const { loading, visible, pages, unreachable } = coreApi.useModuleAccess('yourmodule');
 ```
 
 If you'd rather core's admin manage per-page access for you (Setup → Preferences → 🔐 Access) instead of rolling your own role table like the example just above, declare your pages in `module.manifest.json`'s `"pages"` (`docs/MFF-Core_module-manifest.md`) and read the result here:
 
 | Field | Type | Meaning |
 |---|---|---|
-| `loading` | `boolean` | `true` until the first `GET /api/modules` resolves. Render nothing (or a placeholder) rather than guessing while this is true. |
-| `visible` | `boolean` | Whether *you* (this module) are even in the list for this user — mirrors whether your whole module is shown at all. Always `false` while `loading`. |
+| `loading` | `boolean` | `true` until `GET /api/modules` has been answered by the backend. Render nothing (or a placeholder) rather than guessing while this is true. It also stays `true` while the backend cannot be reached (see `unreachable`). |
+| `visible` | `boolean` | Whether *you* (this module) are even in the list for this user — mirrors whether your whole module is shown at all. `false` means only that the backend's real list lacks your module (not installed, or no access for this user); it is not an answer while `loading` is `true`. |
 | `pages` | `string[] \| null` | `null` = nothing restricted, show every page you declared. An array = only these declared keys are allowed — hide tabs/routes for anything not in it. `[]` while `loading`. |
+| `unreachable` | `boolean` | `true` while `GET /api/modules` cannot be reached (the backend is restarting after an Install/Update, or the request timed out). `loading` is `true` at the same time. |
 
-Re-fetches automatically on login/logout (same cache-invalidation the rest of the module list uses) — you don't need to do anything on auth changes yourself. This only decides what to render; the actual enforcement is `coreApi.requirePage(pageKey)` on your own backend routes (`docs/MFF-Core_module-core-api.md`'s backend section) — never rely on this hook alone to protect anything.
+**Backend unreachable:** core retries by itself (first after 2 s, the wait doubling up to 30 s) and the hook updates when the server is back, so a module needs no code for it: an unreachable backend never shows up as `visible: false`. Re-fetches automatically on login/logout (same cache-invalidation the rest of the module list uses) — you don't need to do anything on auth changes yourself. This only decides what to render; the actual enforcement is `coreApi.requirePage(pageKey)` on your own backend routes (`docs/MFF-Core_module-core-api.md`'s backend section) — never rely on this hook alone to protect anything.
 
 **`visible: true` with `pages: []`** (module access granted, but none of your declared pages are) is a real, legitimate state, not an error — there's no core-provided screen for it. This is the same situation as the role-based tab-visibility example further up this doc: core decided you're allowed to open the module at all, and from there *which of your own pages to show* (including "none, so say something") is your module's own UI, the same way an empty `visibleTabs` already was before this hook existed. Render your own message for it.
 
