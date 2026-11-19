@@ -11,7 +11,7 @@ The exact same model also applies *inside* a module, to one of its own declared 
 - A user belongs to exactly one group today, so "group access" means users whose group is granted.
 - Any one match is enough (role OR group OR user). Page/tab access for *core* pages by role is still Setup → Preferences → 🔐 Access → Core - same `developer`/`administrator`/`SUPERUSER_ROLE` always-allowed rule as above (fixed to match: it used to only bypass for `developer`).
 
-A user's grant on a module decides what they can **open**, not what other modules may use. A module that lists another module in its manifest `"requires"` may call it on behalf of any user who may use the *caller*, even if that user has no grant on the target; the user still cannot open the target directly. See `docs/MFF-Core_module-core-api.md`, "Calling a module you depend on".
+A user's grant on a module decides what they can **open**, not what other modules may use. A module that lists another module in its manifest `"requires"` may call it on behalf of any user who may use the *caller* directly or through a module that (transitively) requires the caller (one-way: a user of `alphapulldown` alone is served by `abcfold` and, through it, `slurm`; a user of `abcfold` alone is not served for `alphapulldown`), even if that user has no grant on the target; the user still cannot open the target directly. See `docs/MFF-Core_module-core-api.md`, "Calling a module you depend on".
 
 ## Where it is stored
 
