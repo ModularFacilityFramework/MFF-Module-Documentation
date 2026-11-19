@@ -11,7 +11,7 @@ Everything is per financial year = academic year, **1 August to 31 July**, named
 `finance_years` (`name`, `start_date`, `end_date`, `is_current`; exactly one row is current, enforced by the
 API). Every year-scoped table has a `year_id` pointing at it; child rows (allocations, requisition items,
 files, reconciliation links) reach the year through their parent. Each tab has a year selector, defaulting to
-the current year. A "+" button (planned) copies the current year's costing model, PhD allocations
+the current year. A "+" button, not built yet, is meant to copy the current year's costing model, PhD allocations
 and classification rules as the template for the next year; transactions, requisitions,
 reconciliations, grants and quotes are running data and are not copied.
 
@@ -20,7 +20,7 @@ reconciliations, grants and quotes are running data and are not copied.
 Declared in `module.manifest.json` `pages`; granted at Setup -> Preferences -> Access (a page nobody has been
 granted is developer/administrator only until an admin grants it):
 `grants`, `commercial`, `costing_model`, `quotes`, `spending`, `usage`, `recovery`, `reports_stats`.
-Commercial and Usage are placeholders; Reports & Stats holds the graphs.
+Every tab is built except Commercial and Usage, which are placeholders (as in the old app). Reports & Stats holds the graphs. The routes, files and configuration behind the tabs are in `MFF-Module-Finance_api-and-config.md`.
 
 ## Tables (all `finance_`)
 
@@ -57,7 +57,7 @@ Users and groups are core's: every user/group column (`pi_user_id`, `phd_student
 
 ## Config
 
-No module-specific config keys. Database credentials: `MODULE_FINANCE_DB_*` in core's `App_backend/.env`,
+Module-specific config key: `MODULE_FINANCE_FILES_DIR` (root folder of the requisition PDFs; see `MFF-Module-Finance_api-and-config.md`). Database credentials: `MODULE_FINANCE_DB_*` in core's `App_backend/.env`,
 read through `coreApi.getModuleConfig()`.
 
 ## Status

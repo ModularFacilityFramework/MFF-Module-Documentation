@@ -92,6 +92,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 | [`MFF-Module-AlphaPulldown_target.md`](docs/MFF-Module-AlphaPulldown_target.md) | AlphaPulldown module — Target tab |
 | [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
 | [`MFF-Module-Finance_overview.md`](docs/MFF-Module-Finance_overview.md) | Finance module (`finance`) |
+| [`MFF-Module-Finance_api-and-config.md`](docs/MFF-Module-Finance_api-and-config.md) | Finance module — API, files and configuration |
 | [`MFF-Module-Pandda2Inspect_config.md`](docs/MFF-Module-Pandda2Inspect_config.md) | pandda2inspect module configuration |
 | [`MFF-Module-SLURM_slurm-config.md`](docs/MFF-Module-SLURM_slurm-config.md) | SLURM module configuration |
 
