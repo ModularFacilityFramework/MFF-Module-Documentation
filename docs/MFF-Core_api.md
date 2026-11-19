@@ -101,9 +101,11 @@ GET /users/job-positions
 - Response: `{ success, jobPositions: [{ id, name }] }`
 
 POST /users/:id/approve
+- Access: Protected, `developer` or `administrator`
 - Only for a pending registration (`registration_pending = 1`). Clears the flag.
 
 POST /users/:id/reject
+- Access: Protected, `developer` or `administrator`
 - Only for a pending registration. Clears the flag.
 
 PUT /users/:id/status
@@ -119,7 +121,7 @@ DELETE /users/:id
 - `GET /groups` — Protected (any authenticated user). Each group has `member_count` and `pis: [{ user_id, is_primary, username, first_name, last_name, name, email }]`, primary PI first.
 - `GET /groups/pi-candidates` — Protected, `developer`/`administrator`/`facility_manager`/`facility_staff`
 - `POST /groups` — Protected, `developer`/`administrator`/`facility_manager` — Body: `{ group_name, pis: [{ user_id, is_primary }] }`. The name alone is valid. A `400` is returned for two primaries, a duplicate user, or an unknown user.
-- `PUT /groups/:id` — same roles as create. Same body; `pis: []` clears the PIs, and omitting `pis` leaves them unchanged.
+- `PUT /groups/:id` — same roles as create. Same body; `pis: []` clears the PIs, and omitting `pis` leaves them unchanged. `pi_name`/`pi_email` are still accepted in the body, but only as legacy free text for a group with no linked PI (ignored once PIs are linked). `{ group_name, pis }` is the normal body.
 - A group can have several PIs, exactly one of them primary (kept by the app). `pi_name`/`pi_email` on the group are a derived copy of the primary PI; a group with no linked PI keeps free text there. No-login accounts can be PIs.
 - `PATCH /groups/:id/archive` / `PATCH /groups/:id/restore` — same roles as create
 - `DELETE /groups/:id` — Protected, `developer`/`facility_manager`

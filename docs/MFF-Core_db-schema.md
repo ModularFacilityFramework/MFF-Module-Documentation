@@ -23,10 +23,10 @@ Seeded roles: `developer` (break-glass superuser, see `SUPERUSER_ROLE` in `.env`
 `pi_name`/`pi_email` are a derived copy of the group's primary PI (see `setup_group_pis`). A group with no linked PI keeps free text there.
 
 ### setup_group_pis
-- group_id (FK → setup_groups(id) ON DELETE CASCADE)
-- user_id (FK → setup_users(id) ON DELETE CASCADE)
-- is_primary
-- created_at
+- group_id BIGINT NOT NULL REFERENCES setup_groups(id) ON DELETE CASCADE
+- user_id BIGINT NOT NULL REFERENCES setup_users(id) ON DELETE CASCADE
+- is_primary TINYINT(1) NOT NULL DEFAULT 0
+- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - PRIMARY KEY (group_id, user_id)
 
 Several PIs per group, exactly one primary per group (kept by the app, not by the database). Created automatically at startup if missing; at startup, groups whose `pi_email` matches a user are linked to that user once, as the primary PI.
