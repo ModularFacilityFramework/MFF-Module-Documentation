@@ -10,10 +10,23 @@ This guide explains how administrators manage users, roles, and system configura
 
 ## Managing Users
 
-### Activate or deactivate users
-- Navigate to the Users tab (visible if your account has the required permissions)
-- Find the user and update their status to Active/Inactive
-- The user receives an email notification on status change
+### Users screen (Setup → Users)
+- Each user has a Type badge: **Standard** or **No login**.
+- The lists are Pending Approval, Active and Inactive.
+- A self-registration appears under Pending Approval (it is inactive with `registration_pending` set). Use **Approve** or **Reject**; both only exist for pending registrations and clear the pending flag. "Inactive" no longer means "pending approval".
+- The edit form has **Status** (Active/Inactive, for every account) and **Account type**.
+- **Make inactive** replaces "Archive".
+- The user receives an email notification on status change.
+
+### Account types
+- **Standard** accounts can log in (login, refresh and password reset work only for standard accounts, and login only when the account is also active).
+- **No login** accounts are contacts/records: unusable password, no MFA, never log in, but still active/inactive, and can be a group member and a PI.
+- Changing No login → Standard needs a password (8+ characters, with an upper-case letter, a lower-case letter and a digit).
+- Changing Standard → No login removes the user's password and MFA and signs them out everywhere.
+
+### Groups screen
+- A group can have **several PIs**, exactly one of them primary. PIs are chosen from users (no-login accounts can be PIs). The group's PI name and email are a copy of the primary PI; a group with no linked PI keeps free text.
+- A group needs only a name; PIs are optional.
 
 ### Job positions and statistics
 - The Users edit form has a "Job position" select. Positions come from the `setup_job_positions` table (see `docs/MFF-Core_db-schema.md`).

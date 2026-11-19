@@ -13,7 +13,7 @@ Authentication
 POST /auth/register-smtp
 - Access: Public
 - Body: `{ username, password, first_name, last_name, email, university?, company?, faculty?, institute?, building?, room?, phone_number?, profile_link?, photo_link?, linkedin_link?, group_website? }`
-- Creates the account with `status: 'inactive'` (pending admin approval) and sends a confirmation email via SMTP.
+- Creates a standard account with `status: 'inactive'` and `registration_pending = 1` (pending admin approval) and sends a confirmation email via SMTP. "Inactive" no longer means "pending approval": only `registration_pending` does.
 - Response: `{ success: true, message, mfaSetupToken }` — `mfaSetupToken` can be used with the registration-time MFA endpoints below for optional post-registration enrollment.
 
 POST /auth/register-mail
@@ -26,11 +26,13 @@ POST /auth/login
 - Body: `{ username, password }`
 - If the account has TOTP enabled: `{ success: true, mfa_required: true, mfa_session_token }` — no tokens issued yet; call one of `/auth/mfa/verify-totp`, `/auth/mfa/verify-recovery`, or `/auth/mfa/verify-email` (after `/auth/mfa/request-email`) with this token to finish logging in.
 - Otherwise: `{ success: true, accessToken, refreshToken, user: { id, username } }`
+- Only a standard, active account can log in. A no-login account (`account_type = 'no_login'`) never logs in.
 
 POST /auth/refresh
 - Access: Public (requires a valid, unrevoked refresh token)
 - Body: `{ refreshToken }`
 - Rotates the refresh token (old one is revoked). Response: `{ success: true, accessToken, refreshToken }`
+- Standard accounts only.
 
 POST /auth/logout
 - Access: Public
@@ -41,7 +43,7 @@ GET /auth/me
 - Access: Protected
 - Response: `{ success: true, user: { id, username, first_name, last_name, email, status }, roles: [{ role }] }`
 
-Password reset
+Password reset (standard accounts only)
 - `POST /auth/reset-password-request` — Body: `{ username }`. Always responds with a generic success message (no user enumeration), regardless of whether the account exists.
 - `GET /auth/verify-reset-token/:token` — Response: `{ valid: boolean }`
 - `POST /auth/reset-password` — Body: `{ token, password }`. On success, revokes all of the user's refresh tokens (forces re-login everywhere).
@@ -80,21 +82,29 @@ GET /users
 - Access: Protected, `administrator` only
 - Query (optional): `page`, `limit`, `sortBy`, `sortDir`, `search`
 - Response (paginated): `{ success, items, total, page, pages, limit }` — each item includes `roles: [{ role }]`
-- Each user also includes `job_position_id` and `job_position`.
+- Each user also includes `job_position_id` and `job_position`, and `account_type` (`standard` or `no_login`) and `registration_pending`.
 - Response (unpaginated/legacy): `{ success, users }`
 
 GET /users/:id
 - Access: Protected — self or `administrator`
-- Response: `{ success, user }` with `user.roles` as a plain string array
+- Response: `{ success, user }` with `user.roles` as a plain string array; `user` includes `account_type` and `registration_pending`.
 
 PUT /users/:id
 - Access: Protected, `developer` or `administrator`
-- Body: any subset of the user's profile fields (`first_name`, `last_name`, `email`, `university`, `company`, `faculty`, `institute`, `building`, `room`, `phone_number`, `profile_link`, `photo_link`, `linkedin_link`, `group_website`, `group_id`, `status`, `job_position_id`)
+- Body: any subset of the user's profile fields (`first_name`, `last_name`, `email`, `university`, `company`, `faculty`, `institute`, `building`, `room`, `phone_number`, `profile_link`, `photo_link`, `linkedin_link`, `group_website`, `group_id`, `status`, `job_position_id`, `account_type`, `password`)
 - `job_position_id`: a valid job position id, or `''`/`null` to clear it. An unknown id is a `400` with "Unknown job position".
+- `status` (`active`/`inactive`) applies to every account, standard or no-login.
+- `account_type`: `standard` or `no_login`. Changing a no-login account to standard needs a `password` (8+ characters, with an upper-case letter, a lower-case letter and a digit). Changing a standard account to no-login removes its password and MFA and signs the user out everywhere. A no-login account has the unusable password `!no_login`, no MFA, and can still be a group member and a PI.
 
 GET /users/job-positions
 - Access: Protected (any logged-in user)
 - Response: `{ success, jobPositions: [{ id, name }] }`
+
+POST /users/:id/approve
+- Only for a pending registration (`registration_pending = 1`). Clears the flag.
+
+POST /users/:id/reject
+- Only for a pending registration. Clears the flag.
 
 PUT /users/:id/status
 - Access: Protected, `administrator` only
@@ -106,9 +116,11 @@ DELETE /users/:id
 
 ## Groups (`/groups`)
 
-- `GET /groups` — Protected (any authenticated user)
-- `POST /groups` — Protected, `developer`/`administrator`/`facility_manager` — Body: `{ group_name, pi_name, pi_email }`
-- `PUT /groups/:id` — same roles as create
+- `GET /groups` — Protected (any authenticated user). Each group has `member_count` and `pis: [{ user_id, is_primary, username, first_name, last_name, name, email }]`, primary PI first.
+- `GET /groups/pi-candidates` — Protected, `developer`/`administrator`/`facility_manager`/`facility_staff`
+- `POST /groups` — Protected, `developer`/`administrator`/`facility_manager` — Body: `{ group_name, pis: [{ user_id, is_primary }] }`. The name alone is valid. A `400` is returned for two primaries, a duplicate user, or an unknown user.
+- `PUT /groups/:id` — same roles as create. Same body; `pis: []` clears the PIs, and omitting `pis` leaves them unchanged.
+- A group can have several PIs, exactly one of them primary (kept by the app). `pi_name`/`pi_email` on the group are a derived copy of the primary PI; a group with no linked PI keeps free text there. No-login accounts can be PIs.
 - `PATCH /groups/:id/archive` / `PATCH /groups/:id/restore` — same roles as create
 - `DELETE /groups/:id` — Protected, `developer`/`facility_manager`
 

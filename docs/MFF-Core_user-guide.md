@@ -6,7 +6,8 @@ This guide walks end users through common tasks in the application.
 
 1. Navigate to the login page (/login)
 2. Enter your username and password
-3. If your account is inactive, contact an administrator to activate it
+3. If you have just registered, your account stays inactive and pending until an administrator approves it. If your account is inactive for any other reason, contact an administrator to activate it
+   - Some accounts are "no login" accounts: a contact record (for example a group PI) that never logs in. Only standard, active accounts can log in.
 4. If you forgot your password, use the "Forgot password?" link to request a reset
 
 ## Dashboard

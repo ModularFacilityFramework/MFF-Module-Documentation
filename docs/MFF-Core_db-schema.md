@@ -20,6 +20,17 @@ Seeded roles: `developer` (break-glass superuser, see `SUPERUSER_ROLE` in `.env`
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - archived_at TIMESTAMP NULL
 
+`pi_name`/`pi_email` are a derived copy of the group's primary PI (see `setup_group_pis`). A group with no linked PI keeps free text there.
+
+### setup_group_pis
+- group_id (FK → setup_groups(id) ON DELETE CASCADE)
+- user_id (FK → setup_users(id) ON DELETE CASCADE)
+- is_primary
+- created_at
+- PRIMARY KEY (group_id, user_id)
+
+Several PIs per group, exactly one primary per group (kept by the app, not by the database). Created automatically at startup if missing; at startup, groups whose `pi_email` matches a user are linked to that user once, as the primary PI.
+
 ### setup_job_positions
 - id BIGINT AUTO_INCREMENT PK
 - name VARCHAR(100) NOT NULL UNIQUE
@@ -46,7 +57,9 @@ Seeded with: PhD student, Master student, PI, Staff, Postdoc, Senior Postdoc, RA
 - photo_link VARCHAR(255) NULL
 - linkedin_link VARCHAR(255) NULL
 - group_website VARCHAR(255) NULL
-- status ENUM('active','inactive') DEFAULT 'inactive'
+- status ENUM('active','inactive') DEFAULT 'inactive' (applies to every account)
+- account_type ENUM('standard','no_login') NOT NULL DEFAULT 'standard'
+- registration_pending TINYINT(1) NOT NULL DEFAULT 0
 - notes TEXT NULL
 - group_id BIGINT NULL REFERENCES setup_groups(id) ON DELETE SET NULL
 - job_position_id BIGINT NULL REFERENCES setup_job_positions(id) ON DELETE SET NULL (added automatically at startup on an existing deployment)
@@ -54,6 +67,8 @@ Seeded with: PhD student, Master student, PI, Staff, Postdoc, Senior Postdoc, RA
 - totp_enabled TINYINT(1) NOT NULL DEFAULT 0
 - last_login TIMESTAMP NULL
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+Account types: a `standard` account can log in (login, refresh and password reset work only for standard accounts, and login only when also `active`). A `no_login` account is a contact/record: its `password_hash` is the unusable value `!no_login`, it has no MFA, it never logs in, it can still be `active`/`inactive`, and it can be a group member and a PI. A self-registration is created `inactive` with `registration_pending = 1`; approving or rejecting it (`POST /users/:id/approve`, `/reject`) clears the flag.
 
 ### setup_user_roles
 - id BIGINT PK
@@ -241,6 +256,7 @@ Indexes: `idx_user_id (user_id)`, `idx_token (token)`.
 ```
 setup_users 1─* setup_user_roles *─1 setup_roles
 setup_users *─1 setup_groups
+setup_groups 1─* setup_group_pis *─1 setup_users
 setup_users *─1 setup_job_positions
 setup_users 1─1 setup_user_preferences
 setup_users 1─* setup_password_resets

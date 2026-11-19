@@ -13,7 +13,8 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     pool,                                 // core's own MariaDB connection pool (see caveat below)
     listRoles,                            // () => Promise<string[]> - every role name that exists in this installation
     getUserRoles,                         // (req.user) => Promise<string[]> - the role names THIS user holds (see "The current user's roles")
-    listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, roles: string[]}>>
+    listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, roles: string[]}>>
+    getGroupPis, listGroupPis,            // see "`getGroupPis(groupId)` / `listGroupPis()`"
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
     getModuleConfig,                      // () => Record<string, string> - see below
@@ -60,9 +61,20 @@ Reads `setup_roles` directly — the same table `checkRole` itself is ultimately
 
 ```js
 const users = await coreApi.listUsers();
-// [{ id, username, email, first_name, last_name, status, roles: ['administrator'] }, ...]
+// [{ id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, roles: ['administrator'] }, ...]
 ```
+`account_type` is `standard` or `no_login` (a no-login account is a contact/record that never logs in, but is still listed and can be a group member or PI); `registration_pending` is 1 for a self-registration an admin has not approved or rejected yet.
 Deliberately simple — full list, no pagination/search/sort (that complexity lives only in `GET /users`, the admin UI's own endpoint, and isn't duplicated here). If a real need for paginated backend-side access ever comes up, this is the function to extend, not a new one to add.
+
+### `getGroupPis(groupId)` / `listGroupPis()`
+
+```js
+const pis = await coreApi.getGroupPis(groupId);
+// [{ user_id, is_primary, username, first_name, last_name, name, email }, ...]  - primary first
+const byGroup = await coreApi.listGroupPis();
+// { [groupId]: [ ...same shape... ] }
+```
+A group can have several PIs, exactly one primary. See `docs/MFF-Core_db-schema.md` (`setup_group_pis`).
 
 ### `getUserWorkspacePath(user)`
 
