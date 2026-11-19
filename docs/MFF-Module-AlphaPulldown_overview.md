@@ -3,14 +3,18 @@
 Module `alphapulldown` (mount `/alphapulldown`, table prefix `alphapulldown_`). `requires: ["slurm", "abcfold"]`. It runs bait-vs-candidates protein screens: feature building (AlphaPulldown) on CPU through the Slurm module, structure prediction on GPU through the ABCFold module. Cite AlphaPulldown2: Molodenskiy et al. 2025, Bioinformatics, doi:10.1093/bioinformatics/btaf115.
 
 ## Tabs
-- Target: define the target (one or more chains from UniProt IDs or own sequences), choose its genome, optionally attach a 3D model, confirm. See the Target doc.
-- Baits: locked until the project's target is confirmed; a shell for now (picking baits from the genome comes next).
-- Sequences: UniProt search, FASTA paste/upload, picking proteins from a proteome in the shared library, bait/candidate selection, generated baits.txt / candidates.txt.
+Tab list: Target, Baits, AlphaPulldown, Modelling (ABCFold), Summary, Library, Setup; staff also get Speed statistics and Page Access. Only Target works so far. Baits opens once the selected target is confirmed. AlphaPulldown, Modelling (ABCFold) and Summary are shown but locked ("not built yet").
+- Target: define the target (one or more chains from UniProt IDs or own sequences), choose its genome, optionally attach a 3D model, confirm. A project can hold several targets. See the Target doc.
+- Baits: locked until the selected target is confirmed; a shell for now (picking baits from the genome comes next).
 - Library: the shared proteomes and feature sets (see the library doc).
+- Setup: per-user environment (default env `alphafold3_alphapulldown`, micromamba), database folder (default /home/linuxhomes/software/genetic_db), pdb_seqres file, template cut-off date, Slurm resources; staff also set the shared library folder and feature set tag.
+- Staff only: Speed statistics, Page Access (page keys: target, baits, alphapulldown, modelling, summary, library, setup).
+
+### Removed tabs
+The old Sequences, MSA (CPU) and Co-folding (GPU) tabs were removed from the UI; their code and backend routes remain in the repo but are unreachable from the interface. The page-access list no longer has the keys sequences, msa and cofold. What they did:
+- Sequences: UniProt search, FASTA paste/upload, picking proteins from a proteome in the shared library, bait/candidate selection, generated baits.txt / candidates.txt.
 - Features (CPU): AlphaPulldown `create_individual_features.py --data_pipeline=alphafold3 --compress_features=True` per protein, against the cluster's genetic databases. One Slurm job per run, proteins searched in parallel with xargs -P inside it. The installed AlphaPulldown 2.9 builds features with AlphaFold 3's data pipeline, which searches local databases only (no MMseqs2 mode); pdb_seqres sits in a subfolder, so its path is passed explicitly (Setup: pdb_seqres_path).
 - Co-folding (GPU): one ABCFold job per bait-candidate pair, created with the caller's own token through the ABCFold module. Unchanged by the library work.
-- Setup: per-user environment (default env `alphafold3_alphapulldown`, micromamba), database folder (default /home/linuxhomes/software/genetic_db), pdb_seqres file, template cut-off date, Slurm resources; staff also set the shared library folder and feature set tag.
-- Staff only: Speed statistics, Page Access (page keys: target, baits, sequences, library, msa = Features (CPU), cofold, setup).
 
 ## No background process
 A run only advances while its owner has the page open (the tabs refresh Slurm/ABCFold state when loaded). Submitted jobs keep running on the cluster when the page is closed.
@@ -31,3 +35,6 @@ Each finished feature or co-folding job adds one anonymised row to alphapulldown
 backend/db/schema.sql is the source of truth, no migrations. New in this release: alphapulldown_library_config, alphapulldown_library_proteomes, alphapulldown_library_feature_sets, columns proteome_id/accession on project_sequences and provenance_json on msa_runs and cofold_runs; the settings table lost msa_use_mmseqs2 and gained pdb_seqres_path (core only adds tables/columns, so an existing install keeps the old column harmlessly).
 
 Target tables: alphapulldown_targets, alphapulldown_target_chains, alphapulldown_target_events.
+
+## Dependencies
+ciftools 0.2.5 (mmCIF reading) was added to the module's package.json.

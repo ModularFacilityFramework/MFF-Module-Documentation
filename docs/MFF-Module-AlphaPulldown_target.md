@@ -1,6 +1,8 @@
 # MFF-Module-AlphaPulldown: Target tab
 
-Step 1 of the new workflow (Target -> Baits -> pairing -> prediction -> ranked summary). The Target tab defines the protein or complex a project is about. It is saved as a draft at any time (valid or not) and confirmed explicitly. The Baits tab exists but is locked until the project's target is confirmed. Baits, pairing and prediction are not built yet.
+Step 1 of the new workflow (Target -> Baits -> pairing -> prediction -> ranked summary). The Target tab defines the protein or complex a project is about. It is saved as a draft at any time (valid or not) and confirmed explicitly. The Baits tab exists but is locked until the selected target is confirmed. Baits, pairing and prediction are not built yet.
+
+A project holds one or many targets (projects stay local to the module, per user, until core provides them). A selector under the project bar switches target; "+ New target" starts a blank draft; "Delete target" removes the target, its chains and events, and its model file.
 
 Words: target = the protein or complex of interest (one or more chains). Genome = the UniProt proteome the target comes from (the baits will later be picked from it).
 
@@ -22,7 +24,7 @@ A complex with two or more different chain sequences is chimeric when any chain 
 ## 3D model (optional)
 - Sources: PDB entry (files.rcsb.org, mmCIF), AlphaFold DB (alphafold.ebi.ac.uk, by UniProt accession), a model predicted with ABCFold (uploaded; picking directly from ABCFold jobs waits for an ABCFold API), or any mmCIF/PDB upload.
 - The file is read (mmCIF via the ciftools library, PDB via a small reader), its protein chains' sequences are extracted and matched to the target's chains (identical / chain is part of the model chain / model chain shorter / similar / none, with identity and coverage). A fetched or uploaded model becomes the selected model; the user checks the match and accepts it, or removes it.
-- Stored in the user's workspace at module-AlphaPulldown/P<n>/target/model.cif|pdb, with SHA-256, size, source, id, version (AlphaFold DB: v<n>; PDB: last revision date), and fetch date. It is not used for folding (target and baits are co-folded).
+- Stored in the user's workspace at module-AlphaPulldown/P<n>/targets/T<id>/model.cif|pdb, with SHA-256, size, source, id, version (AlphaFold DB: v<n>; PDB: last revision date), and fetch date. It is not used for folding (target and baits are co-folded).
 
 ## Confirming
 Needs: at least one chain, a genome, and acceptance of the model if one is loaded. All chains are re-checked first. Changing the chains or genome of a confirmed target, or its model, reopens it as a draft and clears the chimera acknowledgement; a rename does not.
@@ -34,7 +36,22 @@ Only the owner. Developers and administrators can read every target (the tab lis
 The tab shows a methods paragraph built from what was recorded (UniProt accessions with release and date, sequence edits, genome and assembly, which chains were confirmed, chimera acknowledgement, model source/id/version/date, confirmation date) and a history. Unrecorded facts are left out, never guessed. Events table: saved, checked_against_genome, reopened, chimera_acknowledged, confirmed, model_loaded, model_accepted, model_removed.
 
 ## API (under /api/alphapulldown)
-GET/PUT /projects/:id/target; POST /projects/:id/target/validate; POST .../confirm {acknowledgeChimera}; POST .../model/fetch {source: pdb|alphafold_db, id}; POST .../model/upload?filename=&source=upload|abcfold (body = file text, text/plain); POST .../model/accept; DELETE .../model; GET /uniprot/entry/:accession; GET /target/genomes?q=; staff only: GET /targets.
+- `GET /projects/:id/targets` — list the project's targets, with `readOnly` and `chimeraWarning`
+- `POST /projects/:id/targets` — create a target (201)
+- `GET`, `PUT`, `DELETE /targets/:tid`
+- `POST /targets/:tid/validate`
+- `POST /targets/:tid/confirm` (`{ acknowledgeChimera }`)
+- `POST /targets/:tid/model/fetch` (`{ source: pdb|alphafold_db, id }`)
+- `POST /targets/:tid/model/upload?filename=&source=upload|abcfold` (body = file text, `text/plain`)
+- `POST /targets/:tid/model/accept`
+- `DELETE /targets/:tid/model`
+- `GET /uniprot/entry/:accession`
+- `GET /target/genomes?q=`
+- Staff only: `GET /targets` (rows now carry `targetId`)
+
+Owner only. Developers and administrators can read others' targets but not change them; everyone else gets 404.
 
 ## Tables (schema.sql)
-alphapulldown_targets (one per project), alphapulldown_target_chains, alphapulldown_target_events.
+alphapulldown_targets (many rows per project: plain index `idx_target_project`, no longer UNIQUE), alphapulldown_target_chains, alphapulldown_target_events.
+
+**Deployment caveat:** core only adds tables and columns, so a deployment that already created `alphapulldown_targets` keeps the old UNIQUE key on `project_id` (one target per project) until that table is dropped and recreated.
