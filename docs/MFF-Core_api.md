@@ -108,6 +108,12 @@ POST /users/:id/reject
 - Access: Protected, `developer` or `administrator`
 - Only for a pending registration. Clears the flag.
 
+POST /users/:id/activate
+- Access: Protected, `developer` or `administrator`
+- No body.
+- Sets `status` to `active` for any account (standard or no-login), clears `registration_pending`, and gives the user the default role if none is stored. The user is emailed only for standard accounts.
+- Response: `{ success, message: "User status updated to active" }`. `404` for an unknown id.
+
 PUT /users/:id/status
 - Access: Protected, `developer` or `administrator`
 - Body: `{ status: 'active' | 'inactive' }` — also emails the user notifying them of the change.

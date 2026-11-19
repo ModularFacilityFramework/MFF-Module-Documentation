@@ -28,7 +28,8 @@ The admin page shows progress (with the build log) and reloads itself when the b
   - It restores `package-lock.json`. The discarded change is saved as `backups/modules/<id>/discarded-package-lock.json-<ts>.patch`.
   - It moves module lines out of core's tracked `.gitignore` into `.git/info/exclude` (this also happens at backend startup).
   - Any other modified tracked file in the module folder stops the Update with a message. Nothing is discarded.
-- **Git cleanliness check:** after Install/Update, `git status --porcelain` is checked for the module folder and for core. The result is in the response (`gitCheck`), in the job log, and in `GET /modules-management/job` as `job.gitCheck`: `{ clean, module: { entries }, core: { entries }, message }`.
+- **Git cleanliness check:** after Install/Update, `git status --porcelain` is checked for the module folder and for core. It warns only about modified tracked files, or untracked files that the incoming commits add (checked after a best-effort `git fetch`); other untracked paths are not warned about. The result is in the response (`gitCheck`), in the job log, and in `GET /modules-management/job` as `job.gitCheck`: `{ clean, module: { entries }, core: { entries }, message }`.
+- **At every backend start**, every installed module folder, plus `CLAUDE.md.bak-*` and `.claude/*.bak-*`, are added to core's `.git/info/exclude`.
 
 ## The one requirement: `Restart=always`
 
