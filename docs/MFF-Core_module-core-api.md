@@ -17,6 +17,8 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     getGroupPis, listGroupPis,            // see "`getGroupPis(groupId)` / `listGroupPis()`"
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
+    callModuleAsUser,                     // (userId, targetModuleId, method, path, opts) => Promise<{ok, status, data, error, ...}> - background identity, see below
+    getUserWorkspacePathForUserId,        // (userId) => Promise<{active, path, reason}> - background identity, see below
     getModuleConfig,                      // () => Record<string, string> - see below
     toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
     apiBasePath,                          // e.g. "/mff-api" - the prefix your own routes are mounted under
@@ -118,6 +120,38 @@ Behavior worth knowing:
 - **A module that calls another module without listing it in `requires`** gets plain user-level access (the user's own grants decide), and a warning in the backend log. `requires` must therefore list every module the module calls.
 - **Chains are delegated, one-way:** the gate accepts a delegated call when the user may use the calling module directly, **or** through a module that (transitively) lists the caller in `requires`. Example: a user of `alphapulldown` alone is served by `abcfold`, and through `abcfold` by `slurm`, because `alphapulldown` requires `abcfold` and `abcfold` requires `slurm`. It is one-way: a user of `abcfold` alone is not served for `alphapulldown`. Every module must list in `requires` every module it calls.
 - **A named, convenient wrapper around a specific module's API (e.g. `slurm.getResourceProfile()`) is not something core provides** — that naming and interpretation of that module's specific status codes/error messages belongs to whichever module wants to call it, built in that module's own repo on top of this primitive. See `docs/MFF-Core_module-core-api.md`'s companion handoff spec (given separately) for a worked example.
+
+### Background identity: `callModuleAsUser` and `getUserWorkspacePathForUserId`
+
+`callModule` and `getUserWorkspacePath` need a live request: they take the caller's own token or `req.user`. A module that works with no request in flight (typically a timer inside the module, for example `abcfold` advancing a user's queue) uses these two instead. Core has no scheduler of its own; the timer is the module's.
+
+A module must declare `"actsAsUsers": true` in its manifest first (`docs/MFF-Core_module-manifest.md`).
+
+```js
+const result = await coreApi.callModuleAsUser(
+    userId,                        // the user the call acts as
+    'slurm',                       // target module id; must be in this module's manifest "requires"
+    'GET',
+    '/external/resource-profile',  // relative to the target's mountPath
+    { params: { gpuCount: 2 }, body: undefined, timeoutMs: 15000 }
+);
+// result = { ok, status, data, error }
+// or, when core refuses:
+// { ok: false, status: 0, data: null, error, refused: true, reason }
+
+const ws = await coreApi.getUserWorkspacePathForUserId(userId);
+// ws = { active, path, reason }
+```
+
+- **Never throws.** Same convention as `callModule`.
+- **`reason` on a refusal** (`refused: true`) is one of:
+  - `not_declared`: the calling module's manifest lacks `actsAsUsers`.
+  - `not_required`: the target is not in the calling module's manifest `"requires"`.
+  - `user_unavailable`: the user is missing, inactive, a no-login account, or pending registration.
+  - `no_access`: the user may not use the calling module. This is the same rule as live delegation (see "Calling a module you depend on"), including through a module that requires it.
+- **`getUserWorkspacePathForUserId`** follows the same user rules. It answers `{ active: false, path: null, reason: 'forbidden' }` when refused; other reasons are those of `getUserWorkspacePath`.
+- **Mechanism.** Core mints an access token for the user, valid 60 seconds, with a claim `bg: { by, target }`, and uses it only on a loopback call to the target module. The token is valid only on that module's mount path (anywhere else, for example a core route, answers `401`). The calling module never sees the token. The target sees the user as `req.user`, with `req.user.backgroundBy` set to the calling module's id. The delegation header is the same as for `callModule`, so the user needs no grant on the target. The target's `authenticateToken`, `checkRole` and ownership logic still apply to that user.
+- **Audit.** Every call, allowed or refused, writes a log line (`audit: module_background`) and a row in `core_module_background_audit` (`docs/MFF-Core_db-schema.md`).
 
 ### `getModuleConfig()` — your own non-database config, from core's one `.env`
 

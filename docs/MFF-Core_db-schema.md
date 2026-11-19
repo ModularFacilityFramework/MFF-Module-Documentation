@@ -251,6 +251,17 @@ Roles allowed to access a given file, in addition to its owner and admins/develo
 
 Indexes: `idx_user_id (user_id)`, `idx_token (token)`.
 
+### core_module_background_audit
+One row per `coreApi.callModuleAsUser` call, allowed or refused (`docs/MFF-Core_module-core-api.md`, "Background identity"). Kept 180 days. Created at backend startup on existing deployments, and also in `schema.sql`.
+- module_id: the calling module
+- target_id: the module called
+- user_id: the user acted as
+- method
+- path: without the query string
+- outcome: `ok`, `failed` or `refused`
+- reason: why a call was refused
+- status: the HTTP status
+
 ## ERD (conceptual)
 
 ```

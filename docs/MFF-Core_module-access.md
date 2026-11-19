@@ -13,6 +13,8 @@ The exact same model also applies *inside* a module, to one of its own declared 
 
 A user's grant on a module decides what they can **open**, not what other modules may use. A module that lists another module in its manifest `"requires"` may call it on behalf of any user who may use the *caller* directly or through a module that (transitively) requires the caller (one-way: a user of `alphapulldown` alone is served by `abcfold` and, through it, `slurm`; a user of `abcfold` alone is not served for `alphapulldown`), even if that user has no grant on the target; the user still cannot open the target directly. See `docs/MFF-Core_module-core-api.md`, "Calling a module you depend on".
 
+A module with `"actsAsUsers": true` may also act as a user with no request in flight (a timer inside the module). The same rule applies: the user must be able to use the calling module, directly or through a module that requires it, and the target must be in the caller's `requires`. The user then needs no grant on the target. Every such call is audited in `core_module_background_audit`. See `docs/MFF-Core_module-core-api.md`, "Background identity".
+
 ## Where it is stored
 
 `setup_module_access (module_id, subject_type 'user'|'group', subject_id)` for users and groups, and `setup_module_access_roles (module_id, role_id → setup_roles)` for roles, both in core's database. A grant for a user or group that is later deleted is harmless: it can no longer match anyone.
