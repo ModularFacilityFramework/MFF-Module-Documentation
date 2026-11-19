@@ -109,7 +109,7 @@ POST /users/:id/reject
 - Only for a pending registration. Clears the flag.
 
 PUT /users/:id/status
-- Access: Protected, `administrator` only
+- Access: Protected, `developer` or `administrator`
 - Body: `{ status: 'active' | 'inactive' }` — also emails the user notifying them of the change.
 
 DELETE /users/:id
