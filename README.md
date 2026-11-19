@@ -87,6 +87,8 @@ Do not rename or delete a document without checking who refers to it: other repo
 | File | Title |
 |---|---|
 | [`MFF-Module_ABCFold_dev-setup.md`](docs/MFF-Module_ABCFold_dev-setup.md) | ABCFold — Dev setup |
+| [`MFF-Module-AlphaPulldown_overview.md`](docs/MFF-Module-AlphaPulldown_overview.md) | AlphaPulldown module (`alphapulldown`) — overview |
+| [`MFF-Module-AlphaPulldown_setup.md`](docs/MFF-Module-AlphaPulldown_setup.md) | AlphaPulldown module — setup and cluster defaults |
 | [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
 | [`MFF-Module-Finance_overview.md`](docs/MFF-Module-Finance_overview.md) | Finance module (`finance`) |
 | [`MFF-Module-Pandda2Inspect_config.md`](docs/MFF-Module-Pandda2Inspect_config.md) | pandda2inspect module configuration |
