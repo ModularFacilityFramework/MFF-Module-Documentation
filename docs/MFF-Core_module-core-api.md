@@ -264,11 +264,9 @@ Thin, full pass-through to `GET /users` — same admin-only role gate, same pagi
 const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME } = coreApi.getModuleConfig();
 ```
 
-## `MODULE_<ID>_DASHBOARD_POSITION` — admin override for Dashboard tab position
+## Dashboard tab order (`position` and `MODULE_<ID>_DASHBOARD_POSITION` are ignored)
 
-One core-defined config key, not declared in a module's own `module.manifest.json` `config` array (that array is for a module's *own* needs — this one is an admin's UI-layout preference, core's business, not the module's). Set `MODULE_<ID>_DASHBOARD_POSITION=<number>` in `App_backend/.env` and it overrides whatever `position` a module's own `registerDashboardTab()` call hardcoded, per deployment, with zero module-code change.
-
-Read once at startup by `moduleLoader.js` (via `getModuleConfig()`, same as anything else), stored on the in-memory module registry, and returned as `dashboardPosition` in every `/api/modules` entry. `Dashboard.js` uses it ahead of the module's own default when present. A module doesn't read or act on this itself — it flows entirely through core, from `App_backend/.env` to the tab bar's own sort.
+Dashboard tabs, and the left-sidebar entries after the fixed "Dashboard" entry, are listed alphabetically by their displayed label (case-insensitive; a leading emoji is ignored). The `position` a module passes to `registerDashboardTab()` and the admin override `MODULE_<ID>_DASHBOARD_POSITION` in `App_backend/.env` are still accepted, but ignored: neither changes the order. A module does not need to set either, and does not need to do anything else to be ordered.
 
 ## Charts: the shared drill-down pie
 

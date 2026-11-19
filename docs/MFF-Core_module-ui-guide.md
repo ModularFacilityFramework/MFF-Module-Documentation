@@ -20,7 +20,7 @@ Either way, you're never responsible for the header or sidebar — only your own
 
 ### Where your tab sits in the bar
 
-`position` is your own module's default (WordPress `add_menu_page()`-style — lower sorts first; core's own tabs publish `5`/`10`/`15`, so land in a gap between them rather than guessing). **An admin can override this per deployment without touching your code**: `MODULE_<YOUR_ID>_DASHBOARD_POSITION=<number>` in `App_backend/.env` (read once at startup) wins over whatever `position` you hardcoded. You don't need to do anything for this to work — it's applied by core, not by your own registration call. Don't build your own "configurable position" mechanism; this is already it.
+The Dashboard tabs, and the left-sidebar entries that come after the fixed "Dashboard" entry, are listed **alphabetically by their displayed label** (case-insensitive; a leading emoji is ignored). So choose the `label` with that in mind. A module's `position` in `registerDashboardTab` and the admin override `MODULE_<ID>_DASHBOARD_POSITION` no longer affect the order: both are still accepted but ignored, so a module has no need to set either.
 
 ## Color palette
 
