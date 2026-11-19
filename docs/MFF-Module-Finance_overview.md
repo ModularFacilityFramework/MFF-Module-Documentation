@@ -11,8 +11,8 @@ Everything is per financial year = academic year, **1 August to 31 July**, named
 `finance_years` (`name`, `start_date`, `end_date`, `is_current`; exactly one row is current, enforced by the
 API). Every year-scoped table has a `year_id` pointing at it; child rows (allocations, requisition items,
 files, reconciliation links) reach the year through their parent. Each tab has a year selector, defaulting to
-the current year. A "+" button (planned) copies the current year's costing model, PhD allocations,
-classification rules and product categories as the template for the next year; transactions, requisitions,
+the current year. A "+" button (planned) copies the current year's costing model, PhD allocations
+and classification rules as the template for the next year; transactions, requisitions,
 reconciliations, grants and quotes are running data and are not copied.
 
 ## Tabs (pages)
