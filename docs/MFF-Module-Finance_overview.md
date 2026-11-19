@@ -62,4 +62,4 @@ read through `coreApi.getModuleConfig()`.
 
 ## Status
 
-Stage 1: schema, financial-year selector and access in place; tab contents are built tab by tab.
+All tabs are built except Commercial and Usage, which are placeholders as in the old app. The "+" copy-year button is not built yet. The SQL has been exercised only on a SQLite stand-in, not yet on MariaDB, and the screens have not yet been checked in a browser. Requisition files default to /home/local/nusbf/MFF-core/module-finance/files (see `MFF-Module-Finance_api-and-config.md`).
