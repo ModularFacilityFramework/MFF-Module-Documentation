@@ -21,6 +21,11 @@ None of the variables below are declared `"required": true` in the manifest - th
 | `SLURM_BIN_SACCT` | `sacct` | Override if not on PATH - used by the external API's job-status route |
 | `SLURM_BIN_SBATCH` | `sbatch` | Override if not on PATH - used by the external API's job-submission route |
 | `SLURM_BIN_SCANCEL` | `scancel` | Override if not on PATH - used by the external API's job-cancel route |
+| `SLURM_RESTART_MUNGE_CMD` | `sudo -n systemctl restart munge` | Command run over SSH on a node by Recover to restart munge |
+| `SLURM_ENABLE_NODE_CMD` | `sudo -n systemctl enable slurmd` | Command run over SSH on a node by Recover to enable slurmd at boot |
+| `SLURM_SLURMD_LOG_PATH` | `/var/log/slurm/slurmd.log` | Path on a node whose tail Recover reads when the node is still unhealthy |
+| `SLURM_SLURMD_PORT` | `6818` | slurmd port Recover checks with a TCP connection from the backend host |
+| `SLURM_RECOVER_TIMEOUT_MS` | `90000` | How long Recover waits for the node to stop being DOWN/DRAIN/UNK/NOT_RESPONDING |
 | `SLURM_BIN_GETENT` | `getent` | Override if not on PATH - used to refuse a new Slurm user that has no Unix account |
 | `SLURM_CONF_DIR` | `/etc/slurm` | Directory holding the editable config files on the controller and every node (Config tab) |
 | `SLURM_CONF_FILES` | `slurm.conf,gres.conf` | File names the Config tab may edit. slurmdbd.conf is never editable from the app |
@@ -76,21 +81,26 @@ command's output/error) - see `backend/db/schema.sql`.
 
 ## Node recovery
 
-The "Recover" action next to a down/drained/unknown node (`NodeTable.js` /
-`NodeRecovery.js`) runs `scontrol update NodeName=<node> State=RESUME` as
-`SLURM_ADMIN_USER` (via local `sudo -u`, see above) - this is a normal
-control-plane call, not an SSH restart, so it needs no `SLURM_SSH_KEY_PATH`
-at all. It **does** need the local sudo rights described above - without
-them, the button fails cleanly (the UI shows the actual `slurm_update
-error: ...` or `sudo: ...` reason next to "still down" rather than silently
-doing nothing) but never succeeds. It's the *first*, safest stage of a
-three-stage, status-checked escalation: the backend re-checks the node's
-actual state afterwards and reports whether it actually cleared the
-problem. Only if it didn't does the UI offer stage 2 (restart that node's
-`slurmd`, the existing SSH-based restart) and, only if that also didn't fix
-it, stage 3 (restart `slurmctld` - cluster-wide, with its own
-confirmation). Stages 2 and 3 need SSH configuration; stage 1 needs the
-local sudo rights above instead.
+Module version 0.1.35. The "Recover" button next to a problem node (`NodeTable.js` / `NodeRecovery.js`) runs a guided recovery of that node. A node counts as a problem when it is DOWN, DRAIN or UNK, or NOT_RESPONDING. This now includes a node that is IDLE but NOT_RESPONDING (red chip and Recover button in the node table); previously Recover reported such a node as "recovered".
+
+**API** (administrator only):
+- `POST /api/slurm/nodes/:nodeName/recover` starts a background run and answers `202` with the run snapshot: `{ runId, node, status: 'running'|'done', before, after, recovered, failureReason, steps: [{ id, title, status, detail }], logs: { slurmd, controller }, alreadyRunning }`.
+- `GET /api/slurm/nodes/:nodeName/recover/:runId` returns the same snapshot (`404` if unknown, for example after a backend restart).
+- One run per node at a time: a second POST joins the running one. The node name must be in the live Slurm node list.
+- The finished run is written to the Audit tab (category `runtime`, action `node_recover`); the node's previous config content is kept in `before_state`.
+
+**Steps.** Each step has a status `ok`, `fixed`, `warn`, `failed`, `skipped` or `info`:
+- `ssh`: reach the node as `SLURM_SSH_USER`. A changed host key gives a clear message: run `ssh-keygen -R <node>` as the backend's OS user.
+- `clock`: `warn` if the node's clock differs by more than 30 s.
+- `munge`: `systemctl is-active munge`; if not active, restart it with `SLURM_RESTART_MUNGE_CMD`. A credential made on the controller must decode on the node.
+- `config`: the files in `SLURM_CONF_FILES` are compared by sha256 with the controller's. A differing or missing copy on the node is replaced with the controller's through `SLURM_CONF_WRITE_CMD` and read back. A file that exists only on the node (for example a node-local gres.conf) is left alone.
+- `slurmd`: `systemctl is-active slurmd`; started or restarted with `SLURM_RESTART_NODE_CMD` when inactive, when slurmctld says the node is NOT_RESPONDING, or after a config push or munge restart.
+- `boot`: if `systemctl is-enabled slurmd` says disabled, `SLURM_ENABLE_NODE_CMD` enables it. A failure here is only a warning.
+- `resume`: `scontrol update State=RESUME` as `SLURM_ADMIN_USER`, only if the state is DOWN/DRAIN/UNK. Skipped when slurmd failed to start.
+- `wait`: polls every 3 s, up to `SLURM_RECOVER_TIMEOUT_MS`, until the node is no longer DOWN/DRAIN/UNK/NOT_RESPONDING.
+- `why`: only if the node is still unhealthy: slurmctld's reason, a TCP check of the slurmd port (`SLURM_SLURMD_PORT`) from the backend host, the slurmd journal and the tail of `SLURM_SLURMD_LOG_PATH` from the node, and the slurmctld log lines that mention the node, read via the controller.
+
+**Setup.** The `resume` step needs the local sudo rights for `SLURM_ADMIN_USER` described above. The other steps need SSH (`SLURM_SSH_KEY_PATH`; without it Recover degrades to resume plus wait, and says so). On **every compute node**, the SSH user needs this sudoers entry: `slurm ALL=(root) NOPASSWD: /usr/bin/systemctl restart slurmd, /usr/bin/systemctl restart munge, /usr/bin/systemctl enable slurmd, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/slurm.conf, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/gres.conf, /usr/bin/journalctl -u slurmd -n 40 --no-pager`. The journalctl entry is optional: without it the log file tail is still tried. The SSH user must also be able to run `munge -n` and `unmunge`, and to read `/var/log/slurm/slurmctld.log` on the controller; the controller needs nothing more than read access to its log.
 
 ## Logs tab
 
