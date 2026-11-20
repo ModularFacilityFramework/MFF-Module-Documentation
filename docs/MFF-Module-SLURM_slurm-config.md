@@ -99,17 +99,25 @@ over SSH - same SSH configuration requirement as restarts.
 
 ## Admin tabs
 
-Added in module version 0.1.33. Users, Accounts, Runtime, Config and Audit are for administrator/developer only. They are not governed by Page Access, and the backend routes require the administrator role.
+Added in module version 0.1.33 (Users-tab changes in 0.1.34). Users, Accounts, Runtime, Config and Audit are for administrator/developer only. They are not governed by Page Access, and the backend routes require the administrator role.
 
-- **Users:** every Slurm user with accounts, default account, GPU/CPU limits (GrpTRES, MaxTRES, MaxJobs, MaxSubmitJobs, GrpJobs), QOS, admin level and a blocked flag. It cross-checks against MFF users: MFF users with no Slurm user (with a one-click "Add to Slurm"), and Slurm users with no MFF user. Writes: add a user to an account (refused if the name has no Unix account according to `getent passwd`), change the default account, set limits and QOS, block/unblock. Block sets MaxSubmitJobs=0 on the user's associations and stores the previous values in `slurm_user_block`, so Unblock restores them. Nothing is ever deleted: there is no user, account or association deletion anywhere.
+- **Users:** every Slurm user with accounts, default account, GPU/CPU limits (GrpTRES, MaxTRES, MaxJobs, MaxSubmitJobs, GrpJobs), QOS, admin level and a blocked flag. It cross-checks against MFF users: MFF users with no Slurm user (with a one-click "Add to Slurm"), and Slurm users with no MFF user. Writes: add a user to an account (refused if the name has no Unix account according to `getent passwd`; see "Adding a user" below), change the default account, set limits and QOS, block/unblock. Block sets MaxSubmitJobs=0 on the user's associations and stores the previous values in `slurm_user_block`, so Unblock restores them. Nothing is ever deleted: there is no user, account or association deletion anywhere.
 - **Accounts:** list and create accounts, set account limits and QOS. QOS are listed, not created.
 - **Runtime:** `scontrol update` of partition State/MaxTime/Nodes, and node drain (a reason is required) / resume. This is runtime only: it is lost on a slurmctld restart unless slurm.conf is changed too.
 - **Audit:** table `slurm_admin_audit`: who, when, the exact commands, the state before, and the result, for every change in the four tabs above.
 
+Adding a user: `POST /api/slurm/admin/users/add-to-account` takes an optional `gpuQuota` (a whole number, 0 to 100000).
+- It sets `GrpTRES=gres/gpu=N` in the same single command: `sacctmgr -i add user <u> Account=<a> GrpTRES=gres/gpu=N`. 0 is accepted (no GPUs).
+- For a user who is already a member of the account, `gpuQuota` is applied with `sacctmgr modify user where name=<u> account=<a> set GrpTRES=gres/gpu=N`.
+- Without `gpuQuota` and without `makeDefault`, an existing member is still refused ("already belongs to account").
+- An invalid value (negative, fractional, non-numeric, boolean) answers `400` "GPU quota must be a whole number of GPUs (0 or more)".
+
+In the Users tab, "Add to Slurm" is one form: User name, Account (defaults to the most common default account), GPU quota (default 1) and a single "Add user" button. Add user, change default account and edit limits (buttons "Add user" / "Save") apply directly: one request, no `dryRun`, no review dialog. The result is shown, or the error inside the form, which stays open, and the `slurm_admin_audit` entry is still written. Block/Unblock keep their confirmation dialog. The Accounts, Runtime and Config tabs are unchanged.
+
 Every write:
 - the request body is validated against allowlists: names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`; TRES are `key=value` with key in `cpu|mem|node|billing|energy|gres/<n>|license/<n>`; the node, partition, account and QOS must exist;
 - it runs with `execFile` argv (never a shell string) as `SLURM_ADMIN_USER` via `sudo -n -u`;
-- `dryRun: true` returns the exact commands and the before-state for the confirmation dialog without running anything.
+- `dryRun: true` is supported on all admin POST routes: it returns the exact commands and the before-state without running anything or changing anything. The Users tab no longer uses it for add, default account and limits.
 
 HTTP routes (all under `/api/slurm`, administrator only):
 - `GET /admin/users`, `/admin/accounts`, `/admin/runtime`, `/admin/audit`
