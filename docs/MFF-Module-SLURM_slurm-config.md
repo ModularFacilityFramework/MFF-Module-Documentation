@@ -21,6 +21,12 @@ None of the variables below are declared `"required": true` in the manifest - th
 | `SLURM_BIN_SACCT` | `sacct` | Override if not on PATH - used by the external API's job-status route |
 | `SLURM_BIN_SBATCH` | `sbatch` | Override if not on PATH - used by the external API's job-submission route |
 | `SLURM_BIN_SCANCEL` | `scancel` | Override if not on PATH - used by the external API's job-cancel route |
+| `SLURM_BIN_GETENT` | `getent` | Override if not on PATH - used to refuse a new Slurm user that has no Unix account |
+| `SLURM_CONF_DIR` | `/etc/slurm` | Directory holding the editable config files on the controller and every node (Config tab) |
+| `SLURM_CONF_FILES` | `slurm.conf,gres.conf` | File names the Config tab may edit. slurmdbd.conf is never editable from the app |
+| `SLURM_CONF_READ_CMD` | `cat {path}` | Remote command (over SSH) that prints one file; `{path}` = SLURM_CONF_DIR + an allowlisted file name |
+| `SLURM_CONF_WRITE_CMD` | `sudo -n /usr/bin/install -m 0644 /dev/stdin {path}` | Remote command (over SSH) that writes stdin to one file |
+| `SLURM_HEALTH_TIMEOUT_MS` | `180000` | How long to wait for slurmctld and every previously-healthy node to look healthy after a config change before rolling it back |
 
 ## What this module does NOT do
 
@@ -91,6 +97,57 @@ local sudo rights above instead.
 Downloads the tail of `SLURM_CTLD_LOG_PATH` from `SLURM_CONTROLLER_HOST`
 over SSH - same SSH configuration requirement as restarts.
 
+## Admin tabs
+
+Added in module version 0.1.33. Users, Accounts, Runtime, Config and Audit are for administrator/developer only. They are not governed by Page Access, and the backend routes require the administrator role.
+
+- **Users:** every Slurm user with accounts, default account, GPU/CPU limits (GrpTRES, MaxTRES, MaxJobs, MaxSubmitJobs, GrpJobs), QOS, admin level and a blocked flag. It cross-checks against MFF users: MFF users with no Slurm user (with a one-click "Add to Slurm"), and Slurm users with no MFF user. Writes: add a user to an account (refused if the name has no Unix account according to `getent passwd`), change the default account, set limits and QOS, block/unblock. Block sets MaxSubmitJobs=0 on the user's associations and stores the previous values in `slurm_user_block`, so Unblock restores them. Nothing is ever deleted: there is no user, account or association deletion anywhere.
+- **Accounts:** list and create accounts, set account limits and QOS. QOS are listed, not created.
+- **Runtime:** `scontrol update` of partition State/MaxTime/Nodes, and node drain (a reason is required) / resume. This is runtime only: it is lost on a slurmctld restart unless slurm.conf is changed too.
+- **Audit:** table `slurm_admin_audit`: who, when, the exact commands, the state before, and the result, for every change in the four tabs above.
+
+Every write:
+- the request body is validated against allowlists: names match `^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`; TRES are `key=value` with key in `cpu|mem|node|billing|energy|gres/<n>|license/<n>`; the node, partition, account and QOS must exist;
+- it runs with `execFile` argv (never a shell string) as `SLURM_ADMIN_USER` via `sudo -n -u`;
+- `dryRun: true` returns the exact commands and the before-state for the confirmation dialog without running anything.
+
+HTTP routes (all under `/api/slurm`, administrator only):
+- `GET /admin/users`, `/admin/accounts`, `/admin/runtime`, `/admin/audit`
+- `POST /admin/users/{add-to-account,default-account,limits,block,unblock}`, `/admin/accounts`, `/admin/accounts/limits`, `/admin/partitions/update`, `/admin/nodes/{drain,resume}`
+- `GET /config/files`, `/config/changes`, `/config/changes/:id`
+- `POST /config/preview`, `/config/apply`, `/config/changes/:id/rollback`
+
+## Editing the Slurm configuration (Config tab)
+
+Edits `slurm.conf` and `gres.conf` (`SLURM_CONF_FILES`). Flow: edit, then Review, then explicit confirmation, then a backup of the previous content in table `slurm_config_change`, then write to the controller first and then every node (5 at a time, read back and hash-verified) over SSH, then make it effective, then a health check, then automatic rollback if anything fails.
+
+**Review** consists of:
+- the module's own semantic validation: partitions naming unknown nodes, duplicate nodes/partitions, Gres not in GresTypes, two default partitions, missing SlurmctldHost;
+- Slurm's own parser, via `SLURM_CONF=<candidate> scontrol show config`;
+- a diff, and what applying will take.
+
+**How it takes effect** (automatic):
+- only comments or whitespace changed: nothing;
+- a partition or other scalar change: `scontrol reconfigure`;
+- a node definition, GresTypes, SelectType, TaskPlugin, AuthType, accounting storage, gres.conf and similar: restart slurmctld, wait for `scontrol ping`, then restart slurmd on every node (rolling, 5 at a time).
+
+The user can force "restart".
+
+**Health check:** slurmctld answers, and every node that was healthy before (and is still defined) is not DOWN/DRAIN/UNK/NOT_RESPONDING within `SLURM_HEALTH_TIMEOUT_MS`. On any failure (write, reconfigure, restart, health) the previous files are restored on every touched host, the daemons are restarted or reconfigured again, and the change ends as `rolled_back`. If even that does not recover the cluster, it ends as `rollback_failed`, with a red banner in the tab, and the previous file stays in the history. Any past change can be restored from the history. Status `interrupted` means the backend stopped mid-change: check by hand.
+
+**Safety rules:**
+- one change at a time;
+- the file name is allowlisted and the path is always `SLURM_CONF_DIR` + that name;
+- an unreachable healthy node means nothing is changed; an unreachable node that is already DOWN is skipped and reported (it keeps the old file);
+- settings that run programs or plugins as root (Prolog, Epilog, PrologSlurmctld, EpilogSlurmctld, TaskProlog, TaskEpilog, SrunProlog, SrunEpilog, HealthCheckProgram, ResumeProgram, SuspendProgram, ResumeFailProgram, MailProg, RebootProgram, UnkillableStepProgram, JobSubmitPlugins, Include, and others) cannot be added, changed or removed from the app;
+- slurmdbd.conf (it holds the database password) is not editable, so slurmdbd is never restarted by the app (nothing in slurm.conf or gres.conf is read by it).
+
+**What this module does not provision** (the administrator or sysadmin does, like the existing restart setup):
+- **Slurm writes (Users/Accounts/Runtime):** passwordless sudo for the backend's OS user, for example `/etc/sudoers.d/mff-slurm-admin`: `<backend-user> ALL=(root) NOPASSWD: /usr/bin/sacctmgr -i *, /usr/bin/scontrol update *, /usr/bin/scontrol reconfigure`. Alternatively point `SLURM_ADMIN_USER` at a dedicated Slurm operator account. This gives that account full Slurm-admin power.
+- **Config tab:** the same SSH key and user as the restart buttons (`SLURM_SSH_KEY_PATH`, `SLURM_CONTROLLER_HOST`, the key authorised on the controller and every node, node names resolvable as SSH hosts). On the controller and every node, the SSH user (default `slurm`) also needs: `slurm ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /dev/stdin /etc/slurm/slurm.conf, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/gres.conf` (adjust the directory if `SLURM_CONF_DIR` differs), plus the existing `/usr/bin/systemctl restart slurmd` (nodes) and `/usr/bin/systemctl restart slurmctld` (controller) rules.
+
+**Tests:** `npm test` (node:test, Node 20; it uses stub sacctmgr/scontrol and a simulated cluster for the apply/rollback flow).
+
 ## External API for other modules
 
 Other modules (e.g. ABCFold) reach this module's Slurm capabilities via
@@ -123,9 +180,17 @@ Every route below requires (in order):
    *not* against any mff-core role. A real app user can easily not be a
    real Slurm user, and vice versa. A rejection here looks like:
    ```json
-   { "error": "No Slurm access", "message": "The current user does not have access to Slurm." }
+   { "error": "No Slurm access", "reason": "not_slurm_user", "username": "jdoe",
+     "message": "MFF user 'jdoe' is not a Slurm user." }
    ```
-   status `403`. This is a different rejection from the per-job ownership
+   status `403`. The answer names the user that was checked, in both `message` and a separate `username` field, plus a `reason`, one of:
+   - `not_slurm_user`: no Slurm user of that name. The MFF user name is the Slurm/Unix login, compared case-insensitively.
+   - `no_association`: the Slurm user exists but belongs to no account.
+   - `blocked`: all the user's associations have MaxSubmitJobs=0. This is enforced only for `POST /jobs`; status and cancel still work.
+
+   If `sacctmgr` itself fails, the answer is `502 { "error": "Failed to verify Slurm access", "username": "...", "message": "..." }`. Callers can show `message` unchanged.
+
+   This is a different rejection from the per-job ownership
    check below - "you're not a Slurm user at all" vs. "this isn't your job".
 
 ### `GET /resource-profile?gpuCount=N`
