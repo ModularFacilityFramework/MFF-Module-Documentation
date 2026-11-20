@@ -63,6 +63,24 @@ reasoning as `docs/MFF-Module-template_install.md`'s "no install script" section
 provisioning belongs to whoever owns that infrastructure, not to code that
 merely uses it).
 
+## SSH setup (restart, Recover, controller log, Config tab)
+
+Module version 0.1.36. SSH settings can only be set in `App_backend/.env`; there is no settings page. Restart the backend afterwards.
+
+```
+MODULE_SLURM_SLURM_SSH_KEY_PATH=<absolute path of the private key of the OS user running the backend, chmod 600>
+MODULE_SLURM_SLURM_SSH_USER=<login user on the controller and every node>
+MODULE_SLURM_SLURM_CONTROLLER_HOST=<controller name the backend can SSH to, e.g. nusbf = SlurmctldHost>
+```
+
+- `SLURM_SSH_USER` must hold the sudoers rules described in this document. The default `slurm` normally cannot log in (nologin, no home), so set this explicitly.
+- Create the key as the backend's OS user: `ssh-keygen -t ed25519 -N '' -C mff-slurm -f ~/.ssh/mff_slurm`.
+- Authorise it on the controller and on each node: `ssh-copy-id -i ~/.ssh/mff_slurm.pub <ssh-user>@<host>`, or append the `.pub` line to `~<ssh-user>/.ssh/authorized_keys`.
+- Test: `ssh -i ~/.ssh/mff_slurm -o BatchMode=yes <ssh-user>@<node> 'hostname && sudo -n -l'`.
+- A **changed** host key is refused. After confirming the change is legitimate, fix it with `ssh-keygen -R <node>` as the backend user.
+
+When `SLURM_SSH_KEY_PATH` (or `SLURM_CONTROLLER_HOST`, where needed) is unset, or the key file is missing or unreadable by the backend user, Restart node/controller, Recover, the controller log download and the Config tab all return the same message, which names those `.env` variables. In Recover the `ssh` step is then `failed` (not `skipped`), the run snapshot has `setup: { code: 'no_key' | 'key_unreadable', message }`, and the UI shows a highlighted "Setup needed" box; the Slurm resume and wait steps still run. This replaces the earlier wording that Recover "degrades to resume plus wait".
+
 ## How detection works
 
 `backend/services/slurmCli.js` shells out to `scontrol show node --json`,
@@ -100,7 +118,7 @@ Module version 0.1.35. The "Recover" button next to a problem node (`NodeTable.j
 - `wait`: polls every 3 s, up to `SLURM_RECOVER_TIMEOUT_MS`, until the node is no longer DOWN/DRAIN/UNK/NOT_RESPONDING.
 - `why`: only if the node is still unhealthy: slurmctld's reason, a TCP check of the slurmd port (`SLURM_SLURMD_PORT`) from the backend host, the slurmd journal and the tail of `SLURM_SLURMD_LOG_PATH` from the node, and the slurmctld log lines that mention the node, read via the controller.
 
-**Setup.** The `resume` step needs the local sudo rights for `SLURM_ADMIN_USER` described above. The other steps need SSH (`SLURM_SSH_KEY_PATH`; without it Recover degrades to resume plus wait, and says so). On **every compute node**, the SSH user needs this sudoers entry: `slurm ALL=(root) NOPASSWD: /usr/bin/systemctl restart slurmd, /usr/bin/systemctl restart munge, /usr/bin/systemctl enable slurmd, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/slurm.conf, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/gres.conf, /usr/bin/journalctl -u slurmd -n 40 --no-pager`. The journalctl entry is optional: without it the log file tail is still tried. The SSH user must also be able to run `munge -n` and `unmunge`, and to read `/var/log/slurm/slurmctld.log` on the controller; the controller needs nothing more than read access to its log.
+**Setup.** The `resume` step needs the local sudo rights for `SLURM_ADMIN_USER` described above. The other steps need SSH (see "SSH setup"; without a usable key the `ssh` step fails with a "Setup needed" message and only resume and wait still run). On **every compute node**, the SSH user needs this sudoers entry: `slurm ALL=(root) NOPASSWD: /usr/bin/systemctl restart slurmd, /usr/bin/systemctl restart munge, /usr/bin/systemctl enable slurmd, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/slurm.conf, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/gres.conf, /usr/bin/journalctl -u slurmd -n 40 --no-pager`. The journalctl entry is optional: without it the log file tail is still tried. The SSH user must also be able to run `munge -n` and `unmunge`, and to read `/var/log/slurm/slurmctld.log` on the controller; the controller needs nothing more than read access to its log.
 
 ## Logs tab
 
