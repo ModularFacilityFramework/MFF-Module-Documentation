@@ -20,7 +20,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
     callModuleAsUser,                     // (userId, targetModuleId, method, path, opts) => Promise<{ok, status, data, error, ...}> - background identity, see below
     getUserWorkspacePathForUserId,        // (userId) => Promise<{active, path, reason}> - background identity, see below
-    registerUpgradeHandler,               // (path, handler, { page? }) - WebSocket upgrade, see "WebSocket: `registerUpgradeHandler`"
+    registerUpgradeHandler,               // (path, handler, { page?, identify? }) - WebSocket upgrade, see "WebSocket: `registerUpgradeHandler`"
     getModuleConfig,                      // () => Record<string, string> - see below
     toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
     apiBasePath,                          // e.g. "/mff-api" - the prefix your own routes are mounted under
@@ -177,7 +177,7 @@ coreApi.registerUpgradeHandler('/stream', (req, socket, head) => {
     // hand the socket to your own `ws` server
 }, { page: 'run' });   // { page } is optional
 ```
-`coreApi.registerUpgradeHandler(path, handler, { page? })` lets a module accept WebSocket connections. The handler is `(req, socket, head)`. `path` is relative to the module's `mountPath`: the handler serves that exact path and any sub-path below it.
+`coreApi.registerUpgradeHandler(path, handler, { page?, identify? })` lets a module accept WebSocket connections. The handler is `(req, socket, head)`. `path` is relative to the module's `mountPath`: the handler serves that exact path and any sub-path below it.
 
 **Manifest flag:** the module must declare `"websocket": true` (`docs/MFF-Core_module-manifest.md`). Without it, `registerUpgradeHandler` throws and the module is skipped.
 
@@ -191,6 +191,10 @@ coreApi.registerUpgradeHandler('/stream', (req, socket, head) => {
 - A request that is not a WebSocket upgrade answers `400`.
 
 **What the handler gets:** `req.user`, `req.query`, `req.moduleId` and `req.upgradePath`. The `socket` is the raw `net.Socket`. Core adds no `ws` dependency: the module brings its own `ws`.
+
+**`identify` (optional):** `identify: async (req) => userId | { userId } | null`, for a WebSocket client that cannot send the app access token (for example a third-party client that owns the `token` URL parameter). The module proves who is connecting with its own credential (an HttpOnly cookie, a one-time ticket). Then core leaves `req.url` untouched (no token stripping, and the app JWT is not read), loads that user's real identity from the database, and still runs the module access check, and the `page` check, at every connect, so a revoked user is refused at reconnect. `null`, a throw or an unknown user answers `401`. The module must return only ids for credentials it minted and can verify (the same trust model as manifest `publicRoutes`).
+
+**Access token lifetime:** the app access token lives `JWT_ACCESS_EXPIRES_IN` (default 15 m) and is refreshed by the app's axios client, not by a tab opened with `window.open`.
 
 The production web server must pass upgrades through: see "WebSockets through the web server" in `docs/MFF-Core_dev-setup.md`. Sources: `App_backend/src/core/services/moduleUpgrade.js`, `tests/moduleUpgrade.test.js`.
 
