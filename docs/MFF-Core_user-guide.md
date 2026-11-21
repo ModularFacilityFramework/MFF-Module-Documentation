@@ -26,7 +26,7 @@ Every list of people (Users tables, recipient lists, group PIs, search, exports)
 ## Preferences
 
 - Open Setup > Preferences
-- Choose logos and images from your uploaded files
+- Choose logos and images from your uploaded files (Appearance). The app logo, the favicon, the login logo and your profile image are independent: choosing or removing one never changes another
 - Update theme, language, notifications, auto save, and default view
 - Changes are saved automatically for image selections; use Save button for other settings
 

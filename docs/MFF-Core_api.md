@@ -144,13 +144,13 @@ DELETE /users/:id
 
 GET /user-preferences
 - Access: Protected
-- Returns the current user's own preferences, including their own `user_image_path`. Also still returns joined `faculty_logo_path`/`favicon_path`/`login_logo_path` for whatever happens to be on this user's own row, but those three are not the facility's active branding — see GET /app-branding and GET /login-logo below. Returns in-memory defaults if the user has no row yet.
+- Returns the current user's own preferences, including their own `user_image_path`. The facility branding is not part of the personal preferences: see GET /app-branding and GET /login-logo below. Returns in-memory defaults if the user has no row yet.
 
 PUT /user-preferences
 - Access: Protected
 - Body: `{ user_image_file_id?, theme?, language?, notifications?, auto_save?, default_view?, ticket_notification_user_ids?, project_info_user_ids?, user_management_user_ids? }`
-- Personal preferences only. `faculty_logo_file_id`/`favicon_file_id`/`login_logo_file_id` are not accepted here (silently ignored if present) — see PUT /app-branding.
-- Response: the updated preferences row, with joined branding-asset paths.
+- Personal preferences only. The branding keys (`faculty_logo_file_id`, `favicon_file_id`, `login_logo_file_id`) are ignored if present — see PUT /app-branding. The profile image (`user_image_file_id`) stays per user.
+- Response: the updated preferences row.
 
 GET /app-branding
 - Access: Public (no auth — the favicon and header logo must render for every user, logged in or not)
@@ -162,27 +162,9 @@ PUT /app-branding
 - Sets the facility-wide app logo, browser-tab favicon, and login-page logo. Any file id given is copied into the public, unauthenticated `public-uploads/` directory (served at `<API_BASE_PATH>/public-files/...`), since these assets render before login or via tags that can't send an auth header. Restricted to admin-capable roles because every user reads these back globally.
 - Response: `{ success, copyErrors, faviconPath, facultyLogoPath, loginLogoPath, favicon_file_id, faculty_logo_file_id, login_logo_file_id }`.
 
-GET /login-logo below. Returns in-memory defaults if the user has no row yet.
-
-PUT /user-preferences
-- Access: Protected
-- Body: `{ user_image_file_id?, theme?, language?, notifications?, auto_save?, default_view?, ticket_notification_user_ids?, project_info_user_ids?, user_management_user_ids? }`
-- Personal preferences only. `faculty_logo_file_id`/`favicon_file_id`/`login_logo_file_id` are not accepted here (silently ignored if present) — see PUT /app-branding.
-- Response: the updated preferences row, with joined branding-asset paths.
-
-GET /app-branding
-- Access: Public (no auth — the favicon and header logo must render for every user, logged in or not)
-- Response: `{ faviconPath, facultyLogoPath }` — each independently resolved to whichever `setup_user_preferences` row most recently set that specific field (facility-wide, not per-user; an admin sets one or both via PUT /app-branding and it applies for everyone).
-
-PUT /app-branding
-- Access: Protected, `developer`/`administrator` only (or `SUPERUSER_ROLE`)
-- Body: `{ faculty_logo_file_id?, favicon_file_id?, login_logo_file_id? }`
-- Sets the facility-wide app logo, browser-tab favicon, and login-page logo. Any file id given is copied into the public, unauthenticated `public-uploads/` directory (served at `<API_BASE_PATH>/public-files/...`), since these assets render before login or via tags that can't send an auth header. Restricted to admin-capable roles because every user reads these back globally — an unrestricted write would let any logged-in user overwrite the whole facility's branding, not just their own.
-- Response: `{ success, faviconPath, facultyLogoPath, loginLogoPath }` — the resulting global values.
-
 GET /login-logo
 - Access: Public (no auth — needed for the pre-login screen)
-- Response: `{ loginLogoUrl, loginLogoPath }` or `{ loginLogoUrl: null }` — same "most recently set wins" global resolution as GET /app-branding, kept as its own route since it's needed before login.
+- Response: `{ loginLogoUrl, loginLogoPath }` or `{ loginLogoUrl: null }` — reads the login slot only, kept as its own route since it's needed before login.
 
 ## Page access (`/page-access`)
 
