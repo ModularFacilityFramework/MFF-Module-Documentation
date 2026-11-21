@@ -228,7 +228,7 @@ The finance module records GPU allocations: a core group, a number of GPUs, star
 
 ## Page state
 
-Module version 0.1.42. Every tab keeps its state, per user, when the user leaves the tab or reloads the page. What is kept:
+Module version 0.1.42 (storage changed in 0.1.43). Every tab keeps its state, per user, when the user leaves the tab or reloads the page. What is kept:
 - the selected tab;
 - Monitor: the restart-node choice, and the node Recover run (shown again until it is 1 h old or the backend has forgotten it);
 - Stats: the granularity;
@@ -243,7 +243,7 @@ Module version 0.1.42. Every tab keeps its state, per user, when the user leaves
 
 A saved value for something that no longer exists falls back quietly. Cancel and Save forget a form's draft.
 
-**Where it is stored:** in the browser's `localStorage` under `mff:slurm:<userId>:<key>` (per user; it survives a reload and a logout). Everything goes through `frontend/components/usePageState.js`, so it can be switched to core's shared helper in one place.
+**Where it is stored:** by mff-core's shared helper `coreApi.usePageState` (core 0.1.205 or newer: per user, in the browser and on the server; it survives a reload and a logout), with keys of the form `slurm.<page.what>` (`docs/MFF-Core_module-core-api.md`, "`usePageState`"). On an older core without the helper, slurm falls back to the browser's `localStorage` (per user; it survives a reload only). Everything goes through `frontend/components/usePageState.js`. The Config tab's unsaved edits are one saved object for both files; an edit over 60 KB is not saved (core's limit is 64 KB per key).
 
 ## External API for other modules
 
