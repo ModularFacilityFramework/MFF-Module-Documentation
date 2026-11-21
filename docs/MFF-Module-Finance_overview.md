@@ -45,7 +45,7 @@ The table `finance_gpu_purchases` (the name is kept) holds dated allocation line
 
 Rows from before the dates existed have no `start_date`. The API reads them as the financial year's first and last day (`datesAssumed` true), and the Grants tab flags them "⚠ set dates" until edited.
 
-Writes are manager-only (`developer`, `administrator`, `facility_manager`) and a frozen year refuses them; reading is never stopped by a freeze. Other modules (for example slurm) read the lines through `GET /gpu-allocations`; see `MFF-Module-Finance_api-and-config.md`.
+Writes are manager-only (`developer`, `administrator`, `facility_manager`) and a frozen year refuses them; reading is never stopped by a freeze. Other modules (for example slurm) read the lines through `GET /gpu-allocations`; see `MFF-Module-Finance_api-and-config.md`. A group is shown by its current name, read with `coreApi.listGroups()` (mff-core 0.1.197 or newer); while the running core cannot list groups it reads "Group #<id>".
 
 ## Totals and rounding
 
