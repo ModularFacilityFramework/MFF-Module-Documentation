@@ -195,7 +195,7 @@ You get core's raw connection pool because some things (like the two functions a
 ```js
 {
     api, apiGet, apiPost, apiPut, apiDelete,   // the same authenticated axios client core's own pages use
-    buildFileUrl, buildPublicAssetUrl,         // URL builders for private/public uploaded files
+    buildFileUrl, buildPublicAssetUrl,         // URL builders for private/public uploaded files; take a file name or path and ignore any query string
     useAuth,                                   // hook - call it yourself, inside your own component
     useRoles,                                  // (userData) => { roles: string[], hasRole, hasAnyRole, hasAllRoles, canManageUsers } - see "The current user's roles"
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
