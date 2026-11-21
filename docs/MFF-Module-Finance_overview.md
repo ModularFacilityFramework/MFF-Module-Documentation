@@ -47,6 +47,13 @@ Rows from before the dates existed have no `start_date`. The API reads them as t
 
 Writes are manager-only (`developer`, `administrator`, `facility_manager`) and a frozen year refuses them; reading is never stopped by a freeze. Other modules (for example slurm) read the lines through `GET /gpu-allocations`; see `MFF-Module-Finance_api-and-config.md`. A group is shown by its current name, read with `coreApi.listGroups()` (mff-core 0.1.197 or newer); while the running core cannot list groups it reads "Group #<id>".
 
+## People pickers
+
+The pickers for PI, supervisors, PhD student and "prepared by" show users as "First Last (username)", sorted by first name, then last name (case-insensitive).
+- The PI picker lists only users that core marks `is_pi` (core 0.1.199 or newer; on an older core it falls back to the users listed as a PI of a group). It keeps an already chosen PI even if that user is no longer a PI.
+- The supervisor, student and prepared-by pickers keep all users.
+- `GET /people` returns the users sorted that way, each with `job_position` and `is_pi`, plus `pi_ids` (see `MFF-Module-Finance_api-and-config.md`).
+
 ## Totals and rounding
 
 Totals (the Costing Model charge total, the Recovery totals, the Summary PhD consumables) are the exact sum rounded once, not the sum of rounded rows. Room cost and yearly depreciation are no longer rounded before summing, so the figures match the old app to the penny. The costing API returns a `totals` object next to the rates.
