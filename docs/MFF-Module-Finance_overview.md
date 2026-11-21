@@ -39,6 +39,14 @@ granted is developer/administrator only until an admin grants it):
 `grants`, `commercial`, `costing_model`, `quotes`, `spending`, `usage`, `recovery`, `reports_stats`.
 Every tab is built except Commercial and Usage, which are placeholders (as in the old app). Reports & Stats holds the graphs. The routes, files and configuration behind the tabs are in `MFF-Module-Finance_api-and-config.md`.
 
+## GPU allocations (Grants tab)
+
+The table `finance_gpu_purchases` (the name is kept) holds dated allocation lines: `group_id` (a core group id), `quantity` (the number of GPUs), `start_date` and `end_date` (both inclusive; NULL = open-ended), `pi_user_id`, `label` (purchase or grant reference), `purchase_cost` and `notes`. A group can have many lines with different dates.
+
+Rows from before the dates existed have no `start_date`. The API reads them as the financial year's first and last day (`datesAssumed` true), and the Grants tab flags them "year dates" until edited.
+
+Writes are manager-only (`developer`, `administrator`, `facility_manager`) and a frozen year refuses them; reading is never stopped by a freeze. Other modules (for example slurm) read the lines through `GET /gpu-allocations`; see `MFF-Module-Finance_api-and-config.md`.
+
 ## Tables (all `finance_`)
 
 - Years: `years`.
@@ -50,7 +58,7 @@ Every tab is built except Commercial and Usage, which are placeholders (as in th
   (salary + non-salary allocated to the service) / service quantity; FEC rate adds depreciation and estates.
 - Recovery: `phd_recoveries` (PhD student, title, up to three supervisors, funder), `phd_recovery_services`
   (quantity per service).
-- Grants: `gpu_purchases`, `grants` (costed / active / archived, direct or FEC), `grant_services`.
+- Grants: `gpu_purchases` (GPU allocations: see "GPU allocations" below), `grants` (costed / active / archived, direct or FEC), `grant_services`.
 - Spending: `classification_rules`, `transactions` (university SAP export, unique by MD5 hash),
   `requisitions` (+ `requisition_items`, `requisition_files`), `po_reconciliations`, `po_rec_transactions`
   (a transaction is reconciled at most once), `po_req_links` (one REQ can serve many POs; one PO has one REQ,
