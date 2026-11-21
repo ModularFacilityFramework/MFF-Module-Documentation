@@ -35,6 +35,10 @@ Setup → Users has a green **+ Create No-Login User** button (developer and adm
 
 ### Groups screen
 - A group can have **several PIs**, exactly one of them primary. PIs are chosen from users (no-login accounts can be PIs). The PI selector offers only users whose job position is PI, so set a user's Job position to PI in Setup → Users first. PIs already linked to a group stay shown even if their position is not PI. The group's PI name and email are a copy of the primary PI; a group with no linked PI keeps free text.
+- In the group form, choosing a PI in the "Add a PI" list adds them immediately; there is no separate Add button. Pick the primary PI with the radio button.
+- PIs already linked to a group are kept and stay editable whatever their job position. New picks are limited to users whose job position is PI. A PI removed during the edit can be put back.
+- If nobody has the job position PI, the form says so: set a user's Job position to PI in Setup → Users first.
+- If a PI cannot be stored, the page shows "the PI ... was not saved" and keeps the form open.
 - A group needs only a name; PIs are optional.
 
 ### Job positions and statistics
