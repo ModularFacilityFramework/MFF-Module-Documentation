@@ -254,6 +254,16 @@ DELETE /files/:id/roles/:role
 - `POST /shares` — Protected — Body: `{ entity, entityId, targetUserId?, targetRole?, canEdit?, expiresAt? }`
 - `DELETE /shares/:id` — Protected, owner only
 
+## Page state (`/page-state`)
+
+Remembers each user's own page state (see `docs/MFF-Core_module-core-api.md`, "`usePageState`"). All routes are authenticated, touch only the caller's own state, and answer with `Cache-Control: no-store`.
+
+- `GET /page-state` — all the caller's own keys, or only those starting with `?prefix=`
+- `PUT /page-state/:key` — Body: `{ value }`
+- `DELETE /page-state/:key`
+
+Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 1000 keys.
+
 ## Reports (`/reports`)
 
 - `GET /reports/users-summary` — Protected, `administrator` only — counts by status and by role

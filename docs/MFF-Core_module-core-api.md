@@ -199,6 +199,7 @@ You get core's raw connection pool because some things (like the two functions a
     useAuth,                                   // hook - call it yourself, inside your own component
     useRoles,                                  // (userData) => { roles: string[], hasRole, hasAnyRole, hasAllRoles, canManageUsers } - see "The current user's roles"
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
+    usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
     getAllRoles,                               // () => Promise<string[]>
     getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
     DrillDownPie, fetchSlices, normalizeSlices // the shared pie chart - see "Charts: the shared drill-down pie"
@@ -306,6 +307,18 @@ Thin wrapper over `GET /files/available-roles` (the endpoint's own path, kept as
 const { items, total } = await coreApi.getAllUsers({ search: 'smith', sortBy: 'username' });
 ```
 Thin, full pass-through to `GET /users` — same admin-only role gate, same pagination/search/sort query params that endpoint already supports (`page`, `limit`, `sortBy`, `sortDir`, `search`). It is **not** a new capability — a module could already reach this exact endpoint via `coreApi.apiGet('/users', { params })`; this is purely a named, documented shortcut. It inherits whatever the *current* logged-in user is actually allowed to see — a non-administrator calling this gets the same 403 core's own UI would get.
+
+### `usePageState`: page state persistence
+
+```js
+const [tab, setTab, resetTab] = coreApi.usePageState('mymodule.jobs.tab', 'list', ['list', 'new']);
+coreApi.clearPageState('mymodule.jobs.draft');
+```
+`coreApi.usePageState(key, defaultValue, validate?)` returns `[value, setValue(next | fn), reset]`. It keeps the value per user on the server, so it survives leaving the page, a reload and a logout. `validate` is an array of allowed values, a function `(value) => boolean`, or `{ validate }`; a saved value that fails it silently falls back to the default. `coreApi.clearPageState(key)` forgets a key.
+
+**Keys:** named `moduleId.page.what[:id]`, using the characters `A-Za-z0-9 _ . : -`, at most 120. A value is JSON, at most 64 KB. At most 1000 keys per user. Never store secrets.
+
+**Rule:** every page and tab of a module persists the selected tab or sub-tab; the selected year, project, target, job or item; filters, search, sort and columns; open and collapsed sections; and unsaved drafts (call `reset()` after saving a draft). A module must use `coreApi.usePageState` for this and test leave, return and reload. The HTTP routes behind it are in `docs/MFF-Core_api.md` (`/page-state`).
 
 ## Database credentials also go through `getModuleConfig()` now
 

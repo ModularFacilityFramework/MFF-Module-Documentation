@@ -250,6 +250,16 @@ The facility branding, one row per slot (v0.1.203).
 
 Created by `schema.sql`. On an existing deployment it is created at backend startup (`services/brandingService.js`, `ensureBrandingSchema`) and seeded once from the old per-admin `setup_user_preferences` columns (per slot, the newest non-null row).
 
+### core_page_state
+Each user's remembered page state (`docs/MFF-Core_module-core-api.md`, "`usePageState`"), v0.1.205.
+- user_id BIGINT NOT NULL REFERENCES setup_users(id) ON DELETE CASCADE
+- state_key VARCHAR(120) NOT NULL
+- state_value MEDIUMTEXT NOT NULL (JSON, at most 64 KB)
+- updated_at TIMESTAMP
+- PRIMARY KEY (user_id, state_key)
+
+Created by `schema.sql`; on an existing deployment it is created at backend startup (`ensurePageStateSchema`).
+
 ### core_refresh_tokens
 - id BIGINT PK
 - user_id BIGINT NOT NULL REFERENCES setup_users(id) ON DELETE CASCADE

@@ -26,6 +26,10 @@ The Dashboard tabs, and the left-sidebar entries that come after the fixed "Dash
 
 Every list of people a module shows (tables, pickers, exports) is sorted by first name, then last name, case-insensitive, as core's own lists are. Where a username is shown, label the person "First Last (username)". `coreApi.listUsers()` already returns users in that order (`docs/MFF-Core_module-core-api.md`, "`listUsers()`").
 
+### Page state
+
+A module remembers where the user was with `coreApi.usePageState` (`docs/MFF-Core_module-core-api.md`, "`usePageState`"): every page and tab persists its selected tab or sub-tab, selection, filters, search, sort, columns, open and collapsed sections, and unsaved drafts. Test leave, return and reload.
+
 ## Color palette
 
 Every color below is one already in real, repeated use across core — not invented for this guide.
