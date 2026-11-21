@@ -18,8 +18,8 @@ This guide explains how administrators manage users, roles, and system configura
 - **Make inactive** replaces "Archive".
 - The user receives an email notification on status change.
 
-### User drop-downs
-User drop-downs everywhere read "First Last (username)", sorted by first name, then last name.
+### User drop-downs and lists of people
+Every list of people (Users tables, recipient lists, group PIs, search, exports) is sorted by first name, then last name. Drop-downs and recipient lists show "First Last (username)".
 
 ### Account types
 - **Standard** accounts can log in (login, refresh and password reset work only for standard accounts, and login only when the account is also active).

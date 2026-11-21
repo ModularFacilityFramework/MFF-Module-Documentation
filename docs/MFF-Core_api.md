@@ -80,7 +80,7 @@ POST /email/send-local-mail
 
 GET /users
 - Access: Protected, `administrator` only
-- Query (optional): `page`, `limit`, `sortBy`, `sortDir`, `search`
+- Query (optional): `page`, `limit`, `sortBy`, `sortDir`, `search`. The default order is by name (first name, last name, username), not by id. `sortBy` accepts `name` (the new default), `id`, `username`, `email`, `status`, `created_at`, `last_login`, `first_name` and `last_name`.
 - Response (paginated): `{ success, items, total, page, pages, limit }` — each item includes `roles: [{ role }]`
 - Each user also includes `job_position_id` and `job_position`, and `account_type` (`standard` or `no_login`) and `registration_pending`.
 - Response (unpaginated/legacy): `{ success, users }`
@@ -131,7 +131,7 @@ DELETE /users/:id
 
 ## Groups (`/groups`)
 
-- `GET /groups` — Protected (any authenticated user). Each group has `member_count` and `pis: [{ user_id, is_primary, username, first_name, last_name, name, email }]`, primary PI first.
+- `GET /groups` — Protected (any authenticated user). Each group has `member_count` and `pis: [{ user_id, is_primary, username, first_name, last_name, name, email }]`, primary PI first, then by first and last name (not by user id).
 - `GET /groups/pi-candidates` — Protected, `developer`/`administrator`/`facility_manager`/`facility_staff` — per user: `id`, `username`, `email`, `account_type`, `status`, `name`, `first_name`, `last_name`, `job_position`, `is_pi`; sorted by first name, then last name
 - `POST /groups` — Protected, `developer`/`administrator`/`facility_manager` — Body: `{ group_name, pis: [{ user_id, is_primary }] }`. The name alone is valid. A `400` is returned for two primaries, a duplicate user, or an unknown user.
 - `PUT /groups/:id` — same roles as create. Same body; `pis: []` clears the PIs, and omitting `pis` leaves them unchanged. `pi_name`/`pi_email` are still accepted in the body, but only as legacy free text for a group with no linked PI (ignored once PIs are linked). `{ group_name, pis }` is the normal body.
@@ -259,11 +259,11 @@ DELETE /files/:id/roles/:role
 - `GET /reports/files-summary` — Protected, `administrator` only — counts/total size by file type, and uploads per day (last 30 days)
 - `GET /reports/groups-distribution` — Protected, `facility_staff`, `facility_manager`, `administrator` or `developer` — chart shape (see `docs/MFF-Core_module-core-api.md`, "Charts: the shared drill-down pie"): members per group. Users without a group are "No group".
 - `GET /reports/job-roles-distribution?groupId=` — same roles — chart shape: **active** users per job position, "Not set" for none. `groupId` omitted = everyone; `groupId=0` = users with no group; a non-integer or negative value is a `400`.
-- `GET /reports/:name.csv` — Protected, `administrator` only — CSV export; `name` must be `users` or `files`
+- `GET /reports/:name.csv` — Protected, `administrator` only — CSV export; `name` must be `users` or `files`. `users.csv` has the columns `first_name,last_name,username,email,status,created_at,id` (it used to be `id,username,email,status,created_at`) and its rows are sorted by name
 
 ## Search (`/search`)
 
-- `GET /search?q=<term>` — Protected — aggregated results across users and files (top 10 each)
+- `GET /search?q=<term>` — Protected — aggregated results across users and files (top 10 each); user results are sorted by name
 - `GET /search/health` — Public — `{ ok: true, service: 'search' }`
 
 ## Health, Config, Metrics

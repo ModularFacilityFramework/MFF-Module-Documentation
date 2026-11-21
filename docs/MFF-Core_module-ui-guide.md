@@ -22,6 +22,10 @@ Either way, you're never responsible for the header or sidebar — only your own
 
 The Dashboard tabs, and the left-sidebar entries that come after the fixed "Dashboard" entry, are listed **alphabetically by their displayed label** (case-insensitive; a leading emoji is ignored). So choose the `label` with that in mind. A module's `position` in `registerDashboardTab` and the admin override `MODULE_<ID>_DASHBOARD_POSITION` no longer affect the order: both are still accepted but ignored, so a module has no need to set either.
 
+### Lists of people
+
+Every list of people a module shows (tables, pickers, exports) is sorted by first name, then last name, case-insensitive, as core's own lists are. Where a username is shown, label the person "First Last (username)". `coreApi.listUsers()` already returns users in that order (`docs/MFF-Core_module-core-api.md`, "`listUsers()`").
+
 ## Color palette
 
 Every color below is one already in real, repeated use across core — not invented for this guide.

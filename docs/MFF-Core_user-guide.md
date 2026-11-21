@@ -19,9 +19,9 @@ After login, you are redirected to the dashboard.
 - Users & Groups has a "Statistics" tab with two pie charts: Groups Distribution and Job Roles Distribution. Click a group's slice to filter the Job Roles pie to that group; click it again, or press Reset, to show everyone.
 - The Users edit form has a "Job position" select.
 
-## User drop-downs
+## Lists of people and user drop-downs
 
-Wherever you pick a user from a drop-down, entries read "First Last (username)" and are sorted by first name, then last name.
+Every list of people (Users tables, recipient lists, group PIs, search, exports) is sorted by first name, then last name. Drop-downs and recipient lists show "First Last (username)".
 
 ## Preferences
 
