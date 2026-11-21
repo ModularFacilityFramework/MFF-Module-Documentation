@@ -41,11 +41,15 @@ Every tab is built except Commercial and Usage, which are placeholders (as in th
 
 ## GPU allocations (Grants tab)
 
-The table `finance_gpu_purchases` (the name is kept) holds dated allocation lines: `group_id` (a core group id), `quantity` (the number of GPUs), `start_date` and `end_date` (both inclusive; NULL = open-ended), `pi_user_id`, `label` (purchase or grant reference), `purchase_cost` and `notes`. A group can have many lines with different dates.
+The table `finance_gpu_purchases` (the name is kept) holds dated allocation lines, shown in the Grants tab section "GPU allocations": `group_id` (a core group id), `quantity` (the number of GPUs), `start_date` and `end_date` (both inclusive; NULL = open-ended), `pi_user_id` and `notes`. A group can have many lines with different dates. A line belongs to the year selected in the year bar (`year_id` is kept internally, never shown or edited). The `label` and `purchase_cost` columns are gone from `schema.sql`; an already-installed database keeps them, empty and unused.
 
-Rows from before the dates existed have no `start_date`. The API reads them as the financial year's first and last day (`datesAssumed` true), and the Grants tab flags them "year dates" until edited.
+Rows from before the dates existed have no `start_date`. The API reads them as the financial year's first and last day (`datesAssumed` true), and the Grants tab flags them "⚠ set dates" until edited.
 
 Writes are manager-only (`developer`, `administrator`, `facility_manager`) and a frozen year refuses them; reading is never stopped by a freeze. Other modules (for example slurm) read the lines through `GET /gpu-allocations`; see `MFF-Module-Finance_api-and-config.md`.
+
+## Totals and rounding
+
+Totals (the Costing Model charge total, the Recovery totals, the Summary PhD consumables) are the exact sum rounded once, not the sum of rounded rows. Room cost and yearly depreciation are no longer rounded before summing, so the figures match the old app to the penny. The costing API returns a `totals` object next to the rates.
 
 ## Tables (all `finance_`)
 
