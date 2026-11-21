@@ -92,6 +92,23 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 
 The 2025-2026 table was loaded once by a throw-away script kept outside the repository (`master/migration/finance`); it is not a module feature.
 
+## Page state
+
+Every tab keeps its state when the user leaves and comes back, reloads, or logs out. This is done by one hook, `usePageState(key, default, validate)`, in `frontend/persist.js` (keys are named `finance.<page>.<what>`).
+
+**What is kept:**
+- the selected tab (`finance.tab`) and year (`finance.year`);
+- the sub-tabs of Costing Model, Recovery, Quotes and Spending;
+- in Spending: the Requisitions/Transactions filter and search text, the open requisition, and the expanded reconciliation;
+- in Quotes: the status filter;
+- in Grants: "show all";
+- in Usage: the tips-per-plate draft;
+- unsaved form drafts (quote, grant, GPU line, PhD entry, usage row, costing items and rooms, rules, facility profile, requisition notes), cleared on Save or Cancel.
+
+A saved value that no longer exists (a hidden year, a removed sub-tab, a deleted requisition or quote) is ignored silently.
+
+**Where it is stored:** the hook uses mff-core's `coreApi.usePageState` (per user, server side) when the core has it. Until then it uses a `localStorage` stand-in per user id with the same signature (`index.js` calls `configurePersist(coreApi)` once).
+
 ## Tables (all `finance_`)
 
 - Years: `years`.
