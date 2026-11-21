@@ -72,21 +72,21 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 ## Usage tab (MX only for now)
 
 **Data:**
-- `finance_usage_mx`: `year_id`, `user_id` (a core user), `login` (the username the robot's usage data carries), `group_id` (a fallback only) and `tips`. Unique per year and login.
+- `finance_usage_mx`: `year_id`, `user_id` (a core user), `login` (the username the robot's usage data carries), `group_id` (a fallback only), `tips` and `rate_basis` (VARCHAR(10) NOT NULL, default `excl`; `excl` = excluding salaries, `direct` = direct cost with salaries included). Unique per year and login. `rate_basis` is a column with a DEFAULT on an existing table, so core's schema diffing adds it on Update / Apply Schema.
 - `finance_usage_settings`: `year_id` and `mx_tips_per_plate` (default 104).
 
 **Rules:**
 - A group is never typed or stored as a fact. It is the user's current core group (`listUsers().group_id` named by `listGroups()`). A user core no longer lists keeps the group saved with the row.
 - `plates` = tips / tips per plate.
-- The cost per plate is read from the same year's Costing Model, from the service named "MX". "excl. salaries" = non-salary cost / quantity; "direct" = (salary + non-salary) / quantity. With no MX service the costs are empty and a warning is shown.
-- Row cost = plates x the unrounded rate. Group and overall totals add the unrounded amounts and round once.
+- Each row has a Rate drop-down (`rate_basis`). The unit price is the year's Costing Model MX cost per plate of the chosen rate, from the service named "MX": `excl` = non-salary cost / quantity; `direct` = (salary + non-salary) / quantity. With no MX service the prices are empty and a warning is shown.
+- Total = plates x the unrounded unit price. Group and overall totals add the unrounded row totals and round once.
 - "% of group" = the row's plates / the group's plates.
 - Groups are sorted by name ("no group" last); people inside a group are sorted by first, then last name.
 
 **UI:**
 - A "Tips per plate" box at the top (manager roles).
-- "+ Add row": a user picker ("First Last (username)"), the usage login (defaulting to the username) and the tips. Edit and delete (manager roles).
-- One bordered table per group (a title bar with the group name and its PI(s), the user rows, and a shaded bold total line), separated by space. Then a summary table: per group the users, tips, plates, cost excl. salaries, cost direct and % of total, plus the grand total.
+- "+ Add row": a user picker ("First Last (username)"), the usage login (defaulting to the username) and the tips. Edit and delete (manager roles). Changing the rate is a manager-only write, refused (`423`) on a frozen year.
+- One bordered table per group (a title bar with the group name and its PI(s), the user rows, and a shaded bold total line), separated by space. The columns are User, Usage login, Tips, Plates, Rate, Unit price, Total and % of group. Then a summary table with the columns Group, Users, Tips, Plates, Total and % of total, plus the grand total.
 - A disabled "Upload raw data" placeholder: not implemented, the module has no import.
 - A frozen year is read-only. Reading follows the page `usage`.
 
