@@ -8,12 +8,18 @@ see `MFF-Core_module-database-provisioning.md`). Depends on no other module.
 ## Financial years
 
 Everything is per financial year = academic year, **1 August to 31 July**, named `2025-2026`. Table
-`finance_years` (`name`, `start_date`, `end_date`, `is_current`; exactly one row is current, enforced by the
+`finance_years` (`name`, `start_date`, `end_date`, `is_current`, `hidden`; exactly one row is current, enforced by the
 API). Every year-scoped table has a `year_id` pointing at it; child rows (allocations, requisition items,
 files, reconciliation links) reach the year through their parent. Each tab has a year selector, defaulting to
-the current year. A "+" button, not built yet, is meant to copy the current year's costing model, PhD allocations
-and classification rules as the template for the next year; transactions, requisitions,
+the current year, ordered oldest on the left and newest on the right (`GET /finance/years` returns `start_date`
+ascending). A "+" (add a year) button sits right of the selector, shared by every tab. It is a placeholder: it only
+shows "Adding a year is coming soon" and changes nothing. It is meant to copy the current year's costing model,
+PhD allocations and classification rules as the template for the next year; transactions, requisitions,
 reconciliations, grants and quotes are running data and are not copied.
+
+A year with `hidden = 1` keeps all its rows, but the module never lists it, answers `404` for it, and leaves its
+requisitions out of the reconcile screens and the REQ picker, so nothing of it shows or counts. `hidden`
+(TINYINT, default 0) is set by a one-off script run by the user, not by any screen.
 
 ## Tabs (pages)
 
