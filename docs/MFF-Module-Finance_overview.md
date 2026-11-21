@@ -74,15 +74,25 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 **Data:**
 - `finance_usage_mx`: `year_id`, `user_id` (a core user), `login` (the username the robot's usage data carries), `group_id` (a fallback only), `tips` and `rate_basis` (VARCHAR(10) NOT NULL, default `excl`; `excl` = excluding salaries, `direct` = direct cost with salaries included, `ukri` = UKRI PhD). Unique per year and login. `rate_basis` is a column with a DEFAULT on an existing table, so core's schema diffing adds it on Update / Apply Schema.
 - `finance_usage_settings`: `year_id` and `mx_tips_per_plate` (default 104).
+- `finance_usage_mx_moves`: tips moved off a user's row into another group. Columns: `year_id`, `user_id`, `login`, `group_id` (the target group), `tips` and `rate_basis`. Unique per year, login, group and rate; moving more tops it up.
+- `finance_usage_mx_move_log`: an insert-only audit of moves: the year, the user, the login, the from and to group id and name, the tips, the rate, who moved (id and name) and when.
+- Both move tables are new `CREATE TABLE`s, picked up by Update / Apply Schema; no existing table changed.
 
 **Rules:**
-- A group is never typed or stored as a fact. It is the user's current core group (`listUsers().group_id` named by `listGroups()`). A user core no longer lists keeps the group saved with the row.
+- A group is never typed or stored as a fact. A user's own row is in the user's current core group (`listUsers().group_id` named by `listGroups()`). A user core no longer lists keeps the group saved with the row. A moved part (see "Move" below) is in the group it was moved to, so a row's group is not always the user's core group.
 - `plates` = tips / tips per plate.
 - Each row has a Rate drop-down (`rate_basis`). The unit price is the year's Costing Model MX cost per plate of the chosen rate, from the service named "MX": `excl` = non-salary cost / quantity; `direct` = (salary + non-salary) / quantity. With no MX service the prices are empty and a warning is shown.
 - A third choice, "UKRI PhD" (`rate_basis` = `ukri`), gives a unit price of £0.00 and a total of £0.00 whatever the Costing Model says, and needs no MX service. Its plates and its % of group still count. Group and overall totals treat it as 0; they stay empty only if another row cannot be priced because the year has no MX service. The same rules apply as for the other choices: a manager-only write, refused (`423`) on a frozen year.
 - Total = plates x the unrounded unit price. Group and overall totals add the unrounded row totals and round once.
 - "% of group" = the row's plates / the group's plates.
 - Groups are sorted by name ("no group" last); people inside a group are sorted by first, then last name.
+
+**Move.** When a user did plates for someone else, each row's "Move" button (manager roles; not on a frozen year) takes a quantity of tips off the row and puts it under another core group.
+- The quantity is in tips (tips are the stored unit, with the plates shown beside it); "All" is allowed. The target is picked from a drop-down of the active core groups by name, at a chosen rate (the row's own rate by default).
+- The moved part appears in the target group's table, for example "Jean-Lou Reyre (for Josts)", on a tinted row. It counts in that group's plates, totals and % of group. The user's own row keeps the rest, and stays even at 0 tips.
+- Undo is Move again: a moved row moved to the user's own group goes back onto the user's own row, at that row's rate (a moved row at 0 tips disappears). It can also go on to a third group.
+- A moved row has only its own Rate drop-down (no Edit or Delete). While tips are moved away, the user's own row cannot be deleted and its user or login cannot be changed (`409`).
+- "Move history", collapsible at the bottom of the tab, lists the move log.
 
 **UI:**
 - A "Tips per plate" box at the top (manager roles).
