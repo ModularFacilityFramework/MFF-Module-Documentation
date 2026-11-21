@@ -14,6 +14,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     listRoles,                            // () => Promise<string[]> - every role name that exists in this installation
     getUserRoles,                         // (req.user) => Promise<string[]> - the role names THIS user holds (see "The current user's roles")
     listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, roles: string[]}>>
+    listGroups,                           // () => Promise<Array<{id, group_name, archived_at}>> - see "`listGroups()`"
     getGroupPis, listGroupPis,            // see "`getGroupPis(groupId)` / `listGroupPis()`"
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
@@ -67,6 +68,16 @@ const users = await coreApi.listUsers();
 ```
 `account_type` is `standard` or `no_login` (a no-login account is a contact/record that never logs in, but is still listed and can be a group member or PI); `registration_pending` is 1 for a self-registration an admin has not approved or rejected yet.
 Deliberately simple — full list, no pagination/search/sort (that complexity lives only in `GET /users`, the admin UI's own endpoint, and isn't duplicated here). If a real need for paginated backend-side access ever comes up, this is the function to extend, not a new one to add.
+
+### `listGroups()`
+
+```js
+const groups = await coreApi.listGroups();
+// [{ id: number, group_name: string, archived_at: Date | null }, ...]
+```
+Every group in `setup_groups`, archived ones included and marked (`archived_at` non-null = archived, null = active), ordered by `group_name` then `id`. Read-only. `id` is a plain number. Use it instead of raw SQL on `setup_groups`. Example: map a group id from `listUsers()` (`group_id`) to the group's current name.
+
+Available from core v0.1.197. A module that must also run on an older core can feature-detect with `typeof coreApi.listGroups === 'function'`.
 
 ### `getGroupPis(groupId)` / `listGroupPis()`
 
