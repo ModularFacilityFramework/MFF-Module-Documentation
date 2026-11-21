@@ -26,12 +26,17 @@ None of the variables below are declared `"required": true` in the manifest - th
 | `SLURM_SLURMD_LOG_PATH` | `/var/log/slurm/slurmd.log` | Path on a node whose tail Recover reads when the node is still unhealthy |
 | `SLURM_SLURMD_PORT` | `6818` | slurmd port Recover checks with a TCP connection from the backend host |
 | `SLURM_RECOVER_TIMEOUT_MS` | `90000` | How long Recover waits for the node to stop being DOWN/DRAIN/UNK/NOT_RESPONDING |
+| `SLURM_ALLOC_FINANCE_PATH` | `/gpu-allocations` | Path, relative to the finance module's mount, of the GPU allocations lookup (Allocations tab) |
 | `SLURM_BIN_GETENT` | `getent` | Override if not on PATH - used to refuse a new Slurm user that has no Unix account |
 | `SLURM_CONF_DIR` | `/etc/slurm` | Directory holding the editable config files on the controller and every node (Config tab) |
 | `SLURM_CONF_FILES` | `slurm.conf,gres.conf` | File names the Config tab may edit. slurmdbd.conf is never editable from the app |
 | `SLURM_CONF_READ_CMD` | `cat {path}` | Remote command (over SSH) that prints one file; `{path}` = SLURM_CONF_DIR + an allowlisted file name |
 | `SLURM_CONF_WRITE_CMD` | `sudo -n /usr/bin/install -m 0644 /dev/stdin {path}` | Remote command (over SSH) that writes stdin to one file |
 | `SLURM_HEALTH_TIMEOUT_MS` | `180000` | How long to wait for slurmctld and every previously-healthy node to look healthy after a config change before rolling it back |
+
+## Dependencies
+
+Module version 0.1.37. The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
 
 ## What this module does NOT do
 
@@ -183,6 +188,36 @@ The user can force "restart".
 - **Config tab:** the same SSH key and user as the restart buttons (`SLURM_SSH_KEY_PATH`, `SLURM_CONTROLLER_HOST`, the key authorised on the controller and every node, node names resolvable as SSH hosts). On the controller and every node, the SSH user (default `slurm`) also needs: `slurm ALL=(root) NOPASSWD: /usr/bin/install -m 0644 /dev/stdin /etc/slurm/slurm.conf, /usr/bin/install -m 0644 /dev/stdin /etc/slurm/gres.conf` (adjust the directory if `SLURM_CONF_DIR` differs), plus the existing `/usr/bin/systemctl restart slurmd` (nodes) and `/usr/bin/systemctl restart slurmctld` (controller) rules.
 
 **Tests:** `npm test` (node:test, Node 20; it uses stub sacctmgr/scontrol and a simulated cluster for the apply/rollback flow).
+
+## Allocations (GPU quota from finance)
+
+The finance module records GPU allocations: a core group, a number of GPUs, start and end dates, many lines per group (`docs/MFF-Module-Finance_overview.md`, "GPU allocations"). Slurm reads them and sets each mapped group's Slurm account GPU quota, `GrpTRES` `gres/gpu`, to the total of the lines active today (`startDate <= today <= endDate`, both inclusive, `endDate` null = open-ended).
+- Only the `gres/gpu` entry of the account's `GrpTRES` is written; other entries (for example `cpu=...`) are kept.
+- An ended allocation sets the quota to 0, so access ends on its own. A later start date sets the quota up when it arrives.
+
+**Contract with finance.** Slurm calls `GET /api/finance/gpu-allocations` with `coreApi.callModuleAsUser(adminUserId, 'finance', 'GET', path)`. The path is `SLURM_ALLOC_FINANCE_PATH` (in `App_backend/.env`: `MODULE_SLURM_SLURM_ALLOC_FINANCE_PATH`), default `/gpu-allocations`. Slurm expects a `200` answer of the form `{ schema: 1, lines: [{ id, groupId, groupName, gpus, startDate, endDate, label? }] }`, where `groupId` is the core `setup_groups.id`, `gpus` is an integer from 1 to 100000, and the dates are `YYYY-MM-DD` (`endDate` may be null), with all non-deleted lines.
+- A line with `groupId` null is reported and ignored.
+- A line with a bad `gpus` or date value leaves that group's account untouched for the run, and flags it.
+- A finance error, a refusal by core, a malformed answer, or an empty `lines` array changes nothing. An empty list is never turned into "0 GPUs".
+
+**Group to Slurm account mapping** (table `slurm_group_account`):
+- By default the Slurm account with the same name as the group (case-insensitive, exact).
+- An administrator can pick another account, or "Ignore this group", in the Allocations tab.
+- A group with no matching account is flagged "No Slurm account" and skipped, never guessed. A mapped account that no longer exists is flagged.
+- Several groups mapped to one account add up.
+
+**When it runs:**
+- The admin-only Allocations tab has "Preview" (shows what would change, changes nothing) and "Sync now" buttons (`POST /api/slurm/admin/allocations/sync`, body `{ dryRun }`).
+- A daily run, **off** until an administrator enables it in the tab. Settings: auto on/off and an hour 0-23 in server time (table `slurm_allocation_settings`). It runs once per day after that hour; an errored run is retried after an hour; the scheduler checks every 10 minutes.
+- The daily run acts as the last administrator who saved the settings or pressed "Sync now" (`callModuleAsUser` needs a user). If that user is no longer an active administrator, the run log reports the refusal: open the tab and press "Sync now" to set a new one.
+
+**Routes** (all `/api/slurm`, administrator only):
+- `GET /admin/allocations`: the view (groups, lines with active/upcoming/ended state, next change date, the account's current quota, mapping status, the finance error if any, last runs)
+- `POST /admin/allocations/mapping` `{ groupId, groupName, account|null, ignored }`
+- `POST /admin/allocations/settings` `{ autoEnabled, syncHour }`
+- `POST /admin/allocations/sync` `{ dryRun }`
+
+**Logging.** Every account change is one row in the Audit tab (category `allocation`, action `allocation_apply`: the GPU quota before and after, the lines used, the exact `sacctmgr` command, the result). Mapping and settings changes are logged too (`allocation_mapping`, `allocation_settings`). Every sync attempt is also a row in `slurm_allocation_run`, shown as "Last run" in the tab. New tables: `slurm_group_account`, `slurm_allocation_settings`, `slurm_allocation_run` (installed by the module Update).
 
 ## External API for other modules
 
