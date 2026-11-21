@@ -154,7 +154,7 @@ PUT /user-preferences
 
 GET /app-branding
 - Access: Public (no auth — the favicon and header logo must render for every user, logged in or not)
-- Response: `{ faviconPath, facultyLogoPath, loginLogoPath, favicon_file_id, faculty_logo_file_id, login_logo_file_id }`: the facility-wide branding, one slot each, read from `core_app_branding`. A file id is null when its slot is empty.
+- Response: `{ faviconPath, facultyLogoPath, loginLogoPath, favicon_file_id, faculty_logo_file_id, login_logo_file_id }`: the facility-wide branding, one slot each, read from `core_app_branding`. A file id is null when its slot is empty. The three paths are file names only (what `/public-files/<name>` serves), never the server's absolute path. The answer has `Cache-Control: no-cache`.
 
 PUT /app-branding
 - Access: Protected, `developer`/`administrator` only (or `SUPERUSER_ROLE`)
@@ -164,7 +164,7 @@ PUT /app-branding
 
 GET /login-logo
 - Access: Public (no auth — needed for the pre-login screen)
-- Response: `{ loginLogoUrl, loginLogoPath }` or `{ loginLogoUrl: null }` — reads the login slot only, kept as its own route since it's needed before login.
+- Response: `{ loginLogoUrl, loginLogoPath }` or `{ loginLogoUrl: null }` — reads the login slot only, kept as its own route since it's needed before login. `loginLogoUrl` and `loginLogoPath` are file names only, never the server's absolute path, and the answer has `Cache-Control: no-cache`.
 
 ## Page access (`/page-access`)
 
