@@ -36,7 +36,7 @@ None of the variables below are declared `"required": true` in the manifest - th
 
 ## Dependencies
 
-Module version 0.1.37 (Allocations changes in 0.1.38 and 0.1.39; `gpu-capacity` and people display in 0.1.40; `gpu-capacity` made a public route in 0.1.41). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
+Module version 0.1.37 (Allocations changes in 0.1.38 and 0.1.39; `gpu-capacity` and people display in 0.1.40; `gpu-capacity` made a public route in 0.1.41; page state in 0.1.42). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
 
 ## What this module does NOT do
 
@@ -225,6 +225,25 @@ The finance module records GPU allocations: a core group, a number of GPUs, star
 - `POST /admin/allocations/sync` `{ dryRun }`
 
 **Logging.** Every account change is one row in the Audit tab (category `allocation`, action `allocation_apply`: the GPU quota before and after, the lines used, the exact `sacctmgr` command, the result). Mapping and settings changes are logged too (`allocation_mapping`, `allocation_settings`). Every sync attempt is also a row in `slurm_allocation_run`, shown as "Last run" in the tab. New tables: `slurm_group_account`, `slurm_allocation_settings`, `slurm_allocation_run` (installed by the module Update).
+
+## Page state
+
+Module version 0.1.42. Every tab keeps its state, per user, when the user leaves the tab or reloads the page. What is kept:
+- the selected tab;
+- Monitor: the restart-node choice, and the node Recover run (shown again until it is 1 h old or the backend has forgotten it);
+- Stats: the granularity;
+- Users: the filter, and the open form with its typed values;
+- Accounts: the create and limits forms;
+- Allocations: the expanded groups;
+- Runtime: the partition and drain forms;
+- Config: the selected file, the apply mode and the unsaved edit (restored only while the file on the cluster is still the version the edit was started from);
+- Audit: the category and the expanded row;
+- Page Access: the unsaved grid;
+- Job Profiles: the unsaved add rows.
+
+A saved value for something that no longer exists falls back quietly. Cancel and Save forget a form's draft.
+
+**Where it is stored:** in the browser's `localStorage` under `mff:slurm:<userId>:<key>` (per user; it survives a reload and a logout). Everything goes through `frontend/components/usePageState.js`, so it can be switched to core's shared helper in one place.
 
 ## External API for other modules
 
