@@ -36,7 +36,7 @@ None of the variables below are declared `"required": true` in the manifest - th
 
 ## Dependencies
 
-Module version 0.1.37 (Allocations changes in 0.1.38 and 0.1.39; `gpu-capacity` and people display in 0.1.40). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
+Module version 0.1.37 (Allocations changes in 0.1.38 and 0.1.39; `gpu-capacity` and people display in 0.1.40; `gpu-capacity` made a public route in 0.1.41). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
 
 ## What this module does NOT do
 
@@ -280,7 +280,7 @@ Added in module version 0.1.40. Used by the finance module for its "GPUs allocat
   - `totalGpus` is the sum of the GPUs in the GRES of every node Slurm defines. Typed (`gpu:model:N`) and untyped (`gpu:N`) entries are counted; other GRES are ignored.
   - `availableGpus` is the same sum excluding nodes that are DOWN, DRAIN, UNK or NOT_RESPONDING.
 - A Slurm failure answers `502 { success: false, message }`.
-- **Module access:** finance cannot list `slurm` in its manifest `requires` (that would be circular), so core applies slurm's module-level access to the calling user. An administrator must grant the `slurm` module (Setup → Preferences → Modules → Access) to the finance staff roles; otherwise finance shows "cluster size unknown".
+- **Module access (since version 0.1.41):** the route is listed in slurm's manifest `publicRoutes` (`{ GET, /external/gpu-capacity }`, the only public route in the manifest; see `docs/MFF-Core_module-manifest.md`), so core's module-level access gate does not apply: a user needs **no** grant on the slurm module. Core lets the request through untouched, so the handler authenticates itself: a valid bearer token (`401` otherwise) and one of the roles above (`403` otherwise). It is never anonymous. This is how finance reads it with `callModule(userToken, 'slurm', 'GET', '/external/gpu-capacity')`, although it cannot list slurm in `requires` (slurm requires finance, which would be circular).
 
 ### `GET /resource-profile?gpuCount=N`
 
