@@ -8,7 +8,7 @@ see `MFF-Core_module-database-provisioning.md`). Depends on no other module.
 ## Financial years
 
 Everything is per financial year = academic year, **1 August to 31 July**, named `2025-2026`. Table
-`finance_years` (`name`, `start_date`, `end_date`, `is_current`, `hidden`; exactly one row is current, enforced by the
+`finance_years` (`name`, `start_date`, `end_date`, `is_current`, `hidden`, `frozen`, `frozen_at`; exactly one row is current, enforced by the
 API). Every year-scoped table has a `year_id` pointing at it; child rows (allocations, requisition items,
 files, reconciliation links) reach the year through their parent. Each tab has a year selector, defaulting to
 the current year, ordered oldest on the left and newest on the right (`GET /finance/years` returns `start_date`
@@ -20,6 +20,19 @@ reconciliations, grants and quotes are running data and are not copied.
 A year with `hidden = 1` keeps all its rows, but the module never lists it, answers `404` for it, and leaves its
 requisitions out of the reconcile screens and the REQ picker, so nothing of it shows or counts. `hidden`
 (TINYINT, default 0) is set by a one-off script run by the user, not by any screen.
+
+### Frozen years
+
+`finance_years` has `frozen` (TINYINT, default 0) and `frozen_at`. The table `finance_year_freeze_log` (`year_id`, `action` `freeze`|`unfreeze`, `user_id`, `user_name`, `created_at`) records each freeze and unfreeze.
+
+A frozen year cannot be changed. Every write and remove route of the module answers `423` with a message (`lib/freeze.js`, the last step of the write/remove guards). This includes a write in an open year that would touch a frozen one: linking a PO to a REQ of a frozen year, moving a grant into it, or undoing a reconciliation that holds its transactions. Reads, facility profiles and the current-year switch stay allowed.
+
+Endpoints (under `/api/finance`):
+- `PUT /years/:id/freeze` and `PUT /years/:id/unfreeze` (roles `developer`, `administrator`, `facility_manager`)
+- `GET /years/:id/freeze-log`
+- `GET /years` also returns `frozen`, `frozen_at` and `frozen_by`
+
+In the UI, a padlock button in the year bar next to the "+" (confirmation dialog; managers only) freezes the year. A frozen year shows a lock icon in the selector, and every tab's edit controls are off. A year is frozen by a user's click, never by a script.
 
 ## Tabs (pages)
 
