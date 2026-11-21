@@ -37,7 +37,7 @@ In the UI, a padlock button in the year bar next to the "+" (confirmation dialog
 Declared in `module.manifest.json` `pages`; granted at Setup -> Preferences -> Access (a page nobody has been
 granted is developer/administrator only until an admin grants it):
 `grants`, `commercial`, `costing_model`, `quotes`, `spending`, `usage`, `recovery`, `reports_stats`.
-Every tab is built except Commercial and Usage, which are placeholders (as in the old app). Reports & Stats holds the graphs. The routes, files and configuration behind the tabs are in `MFF-Module-Finance_api-and-config.md`.
+Every tab is built except Commercial, which is a placeholder (as in the old app). The Usage tab is built, for MX only for now (see "Usage tab" below). Reports & Stats holds the graphs. The routes, files and configuration behind the tabs are in `MFF-Module-Finance_api-and-config.md`.
 
 ## GPU allocations (Grants tab)
 
@@ -69,6 +69,29 @@ Tables of people are sorted by first name, then last name (case-insensitive), li
 
 Totals (the Costing Model charge total, the Recovery totals, the Summary PhD consumables) are the exact sum rounded once, not the sum of rounded rows. Room cost and yearly depreciation are no longer rounded before summing, so the figures match the old app to the penny. The costing API returns a `totals` object next to the rates.
 
+## Usage tab (MX only for now)
+
+**Data:**
+- `finance_usage_mx`: `year_id`, `user_id` (a core user), `login` (the username the robot's usage data carries), `group_id` (a fallback only) and `tips`. Unique per year and login.
+- `finance_usage_settings`: `year_id` and `mx_tips_per_plate` (default 104).
+
+**Rules:**
+- A group is never typed or stored as a fact. It is the user's current core group (`listUsers().group_id` named by `listGroups()`). A user core no longer lists keeps the group saved with the row.
+- `plates` = tips / tips per plate.
+- The cost per plate is read from the same year's Costing Model, from the service named "MX". "excl. salaries" = non-salary cost / quantity; "direct" = (salary + non-salary) / quantity. With no MX service the costs are empty and a warning is shown.
+- Row cost = plates x the unrounded rate. Group and overall totals add the unrounded amounts and round once.
+- "% of group" = the row's plates / the group's plates.
+- Groups are sorted by name ("no group" last); people inside a group are sorted by first, then last name.
+
+**UI:**
+- A "Tips per plate" box at the top (manager roles).
+- "+ Add row": a user picker ("First Last (username)"), the usage login (defaulting to the username) and the tips. Edit and delete (manager roles).
+- Per-group total lines and an overall total.
+- A disabled "Upload raw data" placeholder: not implemented, the module has no import.
+- A frozen year is read-only. Reading follows the page `usage`.
+
+The 2025-2026 table was loaded once by a throw-away script kept outside the repository (`master/migration/finance`); it is not a module feature.
+
 ## Tables (all `finance_`)
 
 - Years: `years`.
@@ -89,6 +112,7 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
   code parsed from the REQ PDF (plain text); the "Category" of a transaction is its costing item
   (`non_salary`, per year).
 - Quotes: `facility_profiles` (letterhead), `quotes`, `quote_items`.
+- Usage: `usage_mx`, `usage_settings` (see "Usage tab" above).
 
 Users and groups are core's: every user/group column (`pi_user_id`, `phd_student_user_id`, `supervisor_*_id`,
 `reconciled_by`, `created_by`, `group_id`, ...) holds a core id, with no foreign key (another database).
@@ -109,4 +133,4 @@ read through `coreApi.getModuleConfig()`.
 
 ## Status
 
-All tabs are built except Commercial and Usage, which are placeholders as in the old app. The "+" copy-year button is not built yet. The SQL has been exercised only on a SQLite stand-in, not yet on MariaDB, and the screens have not yet been checked in a browser. Requisition files default to /home/local/nusbf/MFF-core/module-finance/files (see `MFF-Module-Finance_api-and-config.md`).
+All tabs are built except Commercial, which is a placeholder as in the old app. The Usage tab is built, MX only for now. The "+" copy-year button is not built yet. The SQL has been exercised only on a SQLite stand-in, not yet on MariaDB, and the screens have not yet been checked in a browser. Requisition files default to /home/local/nusbf/MFF-core/module-finance/files (see `MFF-Module-Finance_api-and-config.md`).
