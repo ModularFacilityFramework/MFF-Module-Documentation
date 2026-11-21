@@ -89,6 +89,13 @@ GET /users/:id
 - Access: Protected — self or `administrator`
 - Response: `{ success, user }` with `user.roles` as a plain string array; `user` includes `account_type` and `registration_pending`.
 
+POST /users/no-login
+- Access: Protected, `developer` or `administrator`
+- Creates a no-login account (a record-only person who never signs in; no email is sent).
+- Body: `username`, `first_name`, `last_name`, `email` (required); `group_id`, `job_position_id`, `university`, `company`, `faculty`, `institute`, `building`, `room`, `phone_number`, `profile_link`, `linkedin_link`, `group_website`, `status` (optional; `status` defaults to `active`).
+- Response: `201 { success, id }`. `400` for bad or missing input, or an unknown group or job position. `409` for a duplicate username or email (compared case-insensitively). `403` for other roles.
+- The account is stored with `account_type` `no_login`, `password_hash` `!no_login`, `registration_pending` 0, no MFA, and one role row `facility_user` (the same as the migrated users).
+
 PUT /users/:id
 - Access: Protected, `developer` or `administrator`
 - Body: any subset of the user's profile fields (`first_name`, `last_name`, `email`, `university`, `company`, `faculty`, `institute`, `building`, `room`, `phone_number`, `profile_link`, `photo_link`, `linkedin_link`, `group_website`, `group_id`, `status`, `job_position_id`, `account_type`, `password`)

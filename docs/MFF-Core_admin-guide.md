@@ -24,6 +24,12 @@ This guide explains how administrators manage users, roles, and system configura
 - Changing No login → Standard needs a password (8+ characters, with an upper-case letter, a lower-case letter and a digit).
 - Changing Standard → No login removes the user's password and MFA and signs them out everywhere.
 
+### Creating a no-login user
+Setup → Users has a green **+ Create No-Login User** button (developer and administrator only). It opens the form "Create No-Login User", for a person who only needs a record: a PhD student, supervisor or PI. The person has no password, cannot sign in or reset a password, and is never sent an email. They can be put in groups, be group PIs, and be picked by modules (for example the finance PI and supervisor pickers).
+- **Required:** username, first name, last name, email. Username and email must be unique, case-insensitively. The form checks the loaded list as you type, and the server answers a duplicate with an error.
+- **Optional:** group, job position, university/affiliation, company, faculty, institute, building, room, phone, profile link, LinkedIn link, group website. The status defaults to active.
+- To let the person sign in later, edit the user, set Account type to Standard and give a password (see above).
+
 ### Groups screen
 - A group can have **several PIs**, exactly one of them primary. PIs are chosen from users (no-login accounts can be PIs). The group's PI name and email are a copy of the primary PI; a group with no linked PI keeps free text.
 - A group needs only a name; PIs are optional.

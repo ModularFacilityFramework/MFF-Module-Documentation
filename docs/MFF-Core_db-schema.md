@@ -68,7 +68,7 @@ Seeded with: PhD student, Master student, PI, Staff, Postdoc, Senior Postdoc, RA
 - last_login TIMESTAMP NULL
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-Account types: a `standard` account can log in (login, refresh and password reset work only for standard accounts, and login only when also `active`). A `no_login` account is a contact/record: its `password_hash` is the unusable value `!no_login`, it has no MFA, it never logs in, it can still be `active`/`inactive`, and it can be a group member and a PI. A self-registration is created `inactive` with `registration_pending = 1`; approving or rejecting it (`POST /users/:id/approve`, `/reject`) clears the flag.
+Account types: a `standard` account can log in (login, refresh and password reset work only for standard accounts, and login only when also `active`). A `no_login` account is a contact/record: its `password_hash` is the unusable value `!no_login`, it has no MFA, it never logs in, it can still be `active`/`inactive`, and it can be a group member and a PI. Created with `POST /users/no-login` (`registration_pending` 0, one role row `facility_user`). A self-registration is created `inactive` with `registration_pending = 1`; approving or rejecting it (`POST /users/:id/approve`, `/reject`) clears the flag.
 
 ### setup_user_roles
 - id BIGINT PK
