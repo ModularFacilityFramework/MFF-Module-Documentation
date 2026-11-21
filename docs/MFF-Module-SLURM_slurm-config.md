@@ -36,7 +36,7 @@ None of the variables below are declared `"required": true` in the manifest - th
 
 ## Dependencies
 
-Module version 0.1.37. The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
+Module version 0.1.37 (Allocations changes in 0.1.38). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
 
 ## What this module does NOT do
 
@@ -195,7 +195,8 @@ The finance module records GPU allocations: a core group, a number of GPUs, star
 - Only the `gres/gpu` entry of the account's `GrpTRES` is written; other entries (for example `cpu=...`) are kept.
 - An ended allocation sets the quota to 0, so access ends on its own. A later start date sets the quota up when it arrives.
 
-**Contract with finance.** Slurm calls `GET /api/finance/gpu-allocations` with `coreApi.callModuleAsUser(adminUserId, 'finance', 'GET', path)`. The path is `SLURM_ALLOC_FINANCE_PATH` (in `App_backend/.env`: `MODULE_SLURM_SLURM_ALLOC_FINANCE_PATH`), default `/gpu-allocations`. Slurm expects a `200` answer of the form `{ schema: 1, lines: [{ id, groupId, groupName, gpus, startDate, endDate, label? }] }`, where `groupId` is the core `setup_groups.id`, `gpus` is an integer from 1 to 100000, and the dates are `YYYY-MM-DD` (`endDate` may be null), with all non-deleted lines.
+**Contract with finance.** Slurm calls finance's `GET /api/finance/gpu-allocations` with `coreApi.callModuleAsUser(adminUserId, 'finance', 'GET', path, { params: { date } })`. `date` is today in the server's local calendar. The path is `SLURM_ALLOC_FINANCE_PATH` (in `App_backend/.env`: `MODULE_SLURM_SLURM_ALLOC_FINANCE_PATH`), default `/gpu-allocations`. The response shape is finance's: see `docs/MFF-Module-Finance_api-and-config.md`. Slurm reads these fields of each entry of `lines`: `id`, `groupId` (the core `setup_groups.id`), `groupName`, `gpus` (an integer from 1 to 100000), `startDate`, `endDate` (`YYYY-MM-DD`; `endDate` may be null), `label` and `datesAssumed`. The rest is ignored.
+- Slurm recomputes each group's active total from the lines and cross-checks it with finance's `groups[].activeGpus` for the same date. A difference leaves that group's account untouched and flags it ("finance reports N GPUs active today ... but its lines add up to M").
 - A line with `groupId` null is reported and ignored.
 - A line with a bad `gpus` or date value leaves that group's account untouched for the run, and flags it.
 - A finance error, a refusal by core, a malformed answer, or an empty `lines` array changes nothing. An empty list is never turned into "0 GPUs".
@@ -205,6 +206,8 @@ The finance module records GPU allocations: a core group, a number of GPUs, star
 - An administrator can pick another account, or "Ignore this group", in the Allocations tab.
 - A group with no matching account is flagged "No Slurm account" and skipped, never guessed. A mapped account that no longer exists is flagged.
 - Several groups mapped to one account add up.
+- `groupName` is null until mff-core v0.1.197 (`coreApi.listGroups`) is deployed. Such a group is shown as "group <id>" (marked "name not known yet"), is never matched to an account by name, and must be mapped by id in the Allocations tab. Once names arrive, the same-name matching works.
+- A line with `datesAssumed` true (a legacy finance row with no dates, read as its financial year's first and last day) is used as a normal line and flagged "dates assumed" in the tab. The fix is to correct the dates in finance.
 
 **When it runs:**
 - The admin-only Allocations tab has "Preview" (shows what would change, changes nothing) and "Sync now" buttons (`POST /api/slurm/admin/allocations/sync`, body `{ dryRun }`).
