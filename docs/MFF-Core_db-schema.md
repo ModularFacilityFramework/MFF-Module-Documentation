@@ -82,7 +82,7 @@ Normalized many-to-many between users and roles — `role_id` is a foreign key, 
 ### setup_user_preferences
 - id BIGINT PK
 - user_id BIGINT UNIQUE NOT NULL REFERENCES setup_users(id) ON DELETE CASCADE
-- faculty_logo_file_id, user_image_file_id, favicon_file_id, login_logo_file_id BIGINT NULL (reference `core_file_uploads(id)` informally — not FK-constrained, since favicon/login_logo/faculty_logo may point at files copied into the public, non-database-tracked `public-uploads/` directory). Despite living on this per-user table, faculty_logo/favicon/login_logo are facility-wide settings, not personal preferences — they're only ever written via `PUT /app-branding` (admin-only) and read back globally via `GET /app-branding`/`GET /login-logo` (whichever row most recently set that field wins), never via this table's own per-user routes. Only `user_image_file_id` is genuinely per-user.
+- faculty_logo_file_id, user_image_file_id, favicon_file_id, login_logo_file_id BIGINT NULL (reference `core_file_uploads(id)` informally, not FK-constrained). Only `user_image_file_id` is read and written now (the profile image is per user). The other three columns are no longer read or written: the facility branding lives in `core_app_branding` (see below). They were seeded into it once, per slot from the newest non-null row.
 - theme VARCHAR(32) DEFAULT 'light'
 - language VARCHAR(8) DEFAULT 'en'
 - notifications TINYINT(1) DEFAULT 1
@@ -170,7 +170,7 @@ Written once by `install/setup-database.js`, never updated afterward. See `docs/
 - uploaded_by BIGINT NOT NULL REFERENCES setup_users(id) ON DELETE CASCADE
 - upload_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-Private uploads are encrypted at rest (AES-256-GCM, see `cryptoService.js`) and served only through the authenticated/authorized `GET /:filename` route. The three public branding assets (favicon, login logo, faculty logo) are copied out to a separate unauthenticated `public-uploads/` directory instead — see `setup_user_preferences` above.
+Private uploads are encrypted at rest (AES-256-GCM, see `cryptoService.js`) and served only through the authenticated/authorized `GET /:filename` route. The three public branding assets (favicon, login logo, faculty logo) are copied out to a separate unauthenticated `public-uploads/` directory instead — see `core_app_branding` below.
 
 ### core_file_roles
 - id BIGINT PK
@@ -240,6 +240,15 @@ Roles allowed to access a given file, in addition to its owner and admins/develo
 - can_edit TINYINT(1) DEFAULT 0
 - expires_at DATETIME NULL
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+### core_app_branding
+The facility branding, one row per slot (v0.1.203).
+- slot VARCHAR(32) PK: `faculty_logo`, `favicon` or `login_logo`
+- file_id BIGINT NULL (references `core_file_uploads(id)` informally; NULL = the slot is empty)
+- updated_by BIGINT NULL
+- updated_at TIMESTAMP
+
+Created by `schema.sql`. On an existing deployment it is created at backend startup (`services/brandingService.js`, `ensureBrandingSchema`) and seeded once from the old per-admin `setup_user_preferences` columns (per slot, the newest non-null row).
 
 ### core_refresh_tokens
 - id BIGINT PK

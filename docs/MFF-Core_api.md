@@ -154,6 +154,24 @@ PUT /user-preferences
 
 GET /app-branding
 - Access: Public (no auth — the favicon and header logo must render for every user, logged in or not)
+- Response: `{ faviconPath, facultyLogoPath, loginLogoPath, favicon_file_id, faculty_logo_file_id, login_logo_file_id }`: the facility-wide branding, one slot each, read from `core_app_branding`. A file id is null when its slot is empty.
+
+PUT /app-branding
+- Access: Protected, `developer`/`administrator` only (or `SUPERUSER_ROLE`)
+- Body: `{ faculty_logo_file_id?, favicon_file_id?, login_logo_file_id? }`. The update is **partial**: only the keys present are written. `null`, `''` or `0` clears just that slot; an absent key leaves its slot untouched. A non-integer or nonexistent file id is a `400` and nothing is saved.
+- Sets the facility-wide app logo, browser-tab favicon, and login-page logo. Any file id given is copied into the public, unauthenticated `public-uploads/` directory (served at `<API_BASE_PATH>/public-files/...`), since these assets render before login or via tags that can't send an auth header. Restricted to admin-capable roles because every user reads these back globally.
+- Response: `{ success, copyErrors, faviconPath, facultyLogoPath, loginLogoPath, favicon_file_id, faculty_logo_file_id, login_logo_file_id }`.
+
+GET /login-logo below. Returns in-memory defaults if the user has no row yet.
+
+PUT /user-preferences
+- Access: Protected
+- Body: `{ user_image_file_id?, theme?, language?, notifications?, auto_save?, default_view?, ticket_notification_user_ids?, project_info_user_ids?, user_management_user_ids? }`
+- Personal preferences only. `faculty_logo_file_id`/`favicon_file_id`/`login_logo_file_id` are not accepted here (silently ignored if present) — see PUT /app-branding.
+- Response: the updated preferences row, with joined branding-asset paths.
+
+GET /app-branding
+- Access: Public (no auth — the favicon and header logo must render for every user, logged in or not)
 - Response: `{ faviconPath, facultyLogoPath }` — each independently resolved to whichever `setup_user_preferences` row most recently set that specific field (facility-wide, not per-user; an admin sets one or both via PUT /app-branding and it applies for everyone).
 
 PUT /app-branding
