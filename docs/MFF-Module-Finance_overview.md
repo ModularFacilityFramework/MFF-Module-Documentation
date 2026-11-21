@@ -90,8 +90,10 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 **Move.** When a user did plates for someone else, each row's "Move" button (manager roles; not on a frozen year) takes a quantity of tips off the row and puts it under another core group.
 - The quantity is in tips (tips are the stored unit, with the plates shown beside it); "All" is allowed. The target is picked from a drop-down of the active core groups by name, at a chosen rate (the row's own rate by default).
 - The moved part appears in the target group's table, for example "Jean-Lou Reyre (for Josts)", on a tinted row. It counts in that group's plates, totals and % of group. The user's own row keeps the rest, and stays even at 0 tips.
-- Undo is Move again: a moved row moved to the user's own group goes back onto the user's own row, at that row's rate (a moved row at 0 tips disappears). It can also go on to a third group.
-- A moved row has only its own Rate drop-down (no Edit or Delete). While tips are moved away, the user's own row cannot be deleted and its user or login cannot be changed (`409`).
+- Undo is Move again: a moved row moved to the user's own group goes back onto the user's own row, at that row's rate (a moved row at 0 tips disappears). It can also go on to a third group. If the user's own row is missing, moving back creates it again (same group, at the moved row's rate).
+- Every Usage row keeps Move, Edit and Delete: the user's own row and the moved rows ("for <group>"). Editing a moved row can change its tips (a whole number, 1 or more) and/or its rate. If the new rate matches another moved row of the same user, group and rate, the two merge. Deleting a moved row removes it, and its tips are not given back to the user's own row.
+- The user's own row is not locked while tips are moved away.
+- Edit and delete never touch the move log (`finance_usage_mx_move_log`), which stays as history. These writes are manager-only and refused (`423`) on a frozen year.
 - "Move history", collapsible at the bottom of the tab, lists the move log.
 
 **UI:**
