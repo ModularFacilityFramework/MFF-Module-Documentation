@@ -47,12 +47,23 @@ Rows from before the dates existed have no `start_date`. The API reads them as t
 
 Writes are manager-only (`developer`, `administrator`, `facility_manager`) and a frozen year refuses them; reading is never stopped by a freeze. Other modules (for example slurm) read the lines through `GET /gpu-allocations`; see `MFF-Module-Finance_api-and-config.md`. A group is shown by its current name, read with `coreApi.listGroups()` (mff-core 0.1.197 or newer); while the running core cannot list groups it reads "Group #<id>".
 
+### GPU total line
+
+The Grants tab's GPU allocations table ends with a total row, which is read-only and so also shows on a frozen year. It shows:
+- the GPUs allocated by every line active today (`start <= today <= end`, or no end; all visible years; the same sum Slurm makes);
+- the number of GPUs the cluster really has;
+- the difference: red "oversubscribed by N GPUs (x%)" when allocated is more than the cluster, green "N free" otherwise.
+
+The cluster size is asked of Slurm at runtime: `coreApi.callModule(token, 'slurm', 'GET', '/external/gpu-capacity')`, which answers `{ totalGpus, availableGpus, ... }` (slurm 0.1.40; `totalGpus` is all the GPUs in the GRES of every node Slurm defines). Finance does **not** list `slurm` in `requires`, because slurm requires finance and that would be circular. The call therefore runs with the logged-in user's own access: the user's role needs core's module-level access to `slurm` (Setup → Preferences → Modules → Access, for the roles `facility_manager` and `facility_staff`, and `administrator`/`developer`). Otherwise, or if Slurm does not answer, the row shows the allocated total and "cluster size unknown". A good answer is cached for 60 s, a failure never. Core logs a warning for the undeclared dependency.
+
 ## People pickers
 
 The pickers for PI, supervisors, PhD student and "prepared by" show users as "First Last (username)", sorted by first name, then last name (case-insensitive).
 - The PI picker lists only users that core marks `is_pi` (core 0.1.199 or newer; on an older core it falls back to the users listed as a PI of a group). It keeps an already chosen PI even if that user is no longer a PI.
 - The supervisor, student and prepared-by pickers keep all users.
 - `GET /people` returns the users sorted that way, each with `job_position` and `is_pi`, plus `pi_ids` (see `MFF-Module-Finance_api-and-config.md`).
+
+Tables of people are sorted by first name, then last name (case-insensitive), like the pickers: the Recovery PhD entries and by-staff table, the Grants "PhD students using EM IT" table, and the Costing Model salary rows (`ORDER BY LOWER(staff_name)`). Money and date tables keep their natural order.
 
 ## Totals and rounding
 
