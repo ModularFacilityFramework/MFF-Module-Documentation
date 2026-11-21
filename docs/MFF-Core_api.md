@@ -264,6 +264,14 @@ Remembers each user's own page state (see `docs/MFF-Core_module-core-api.md`, "`
 
 Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 1000 keys.
 
+## Modules management (`/modules-management`)
+
+"Update all" on the Modules page (`docs/MFF-Core_module-install-finalize.md`, "Update all"). `developer`/`administrator` only.
+
+- `GET /modules-management/update-all/preview` — checks every installed module with `git fetch`. Response: `{ updates: [{ id, label, from, to, behind }], unchecked: [{ id, reason }] }`
+- `POST /modules-management/update-all` — starts the job. Body: `{ modules?: [ids] }` (only the named modules that still have an update). Response: `{ job, updates, unchecked, message }`
+- `GET /modules-management/job` — the latest job, with `modules: [{ id, label, from, to, status, step, message }]` (`status` is `pending`, `running`, `done` or `failed`) and `failedModules`.
+
 ## Reports (`/reports`)
 
 - `GET /reports/users-summary` — Protected, `administrator` only — counts by status and by role
