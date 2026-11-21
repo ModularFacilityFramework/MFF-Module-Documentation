@@ -20,6 +20,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
     callModuleAsUser,                     // (userId, targetModuleId, method, path, opts) => Promise<{ok, status, data, error, ...}> - background identity, see below
     getUserWorkspacePathForUserId,        // (userId) => Promise<{active, path, reason}> - background identity, see below
+    registerUpgradeHandler,               // (path, handler, { page? }) - WebSocket upgrade, see "WebSocket: `registerUpgradeHandler`"
     getModuleConfig,                      // () => Record<string, string> - see below
     toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
     apiBasePath,                          // e.g. "/mff-api" - the prefix your own routes are mounted under
@@ -168,6 +169,30 @@ const ws = await coreApi.getUserWorkspacePathForUserId(userId);
 - **`getUserWorkspacePathForUserId`** follows the same user rules. It answers `{ active: false, path: null, reason: 'forbidden' }` when refused; other reasons are those of `getUserWorkspacePath`.
 - **Mechanism.** Core mints an access token for the user, valid 60 seconds, with a claim `bg: { by, target }`, and uses it only on a loopback call to the target module. The token is valid only on that module's mount path (anywhere else, for example a core route, answers `401`). The calling module never sees the token. The target sees the user as `req.user`, with `req.user.backgroundBy` set to the calling module's id. The delegation header is the same as for `callModule`, so the user needs no grant on the target. The target's `authenticateToken`, `checkRole` and ownership logic still apply to that user.
 - **Audit.** Every call, allowed or refused, writes a log line (`audit: module_background`) and a row in `core_module_background_audit` (`docs/MFF-Core_db-schema.md`).
+
+### WebSocket: `registerUpgradeHandler`
+
+```js
+coreApi.registerUpgradeHandler('/stream', (req, socket, head) => {
+    // hand the socket to your own `ws` server
+}, { page: 'run' });   // { page } is optional
+```
+`coreApi.registerUpgradeHandler(path, handler, { page? })` lets a module accept WebSocket connections. The handler is `(req, socket, head)`. `path` is relative to the module's `mountPath`: the handler serves that exact path and any sub-path below it.
+
+**Manifest flag:** the module must declare `"websocket": true` (`docs/MFF-Core_module-manifest.md`). Without it, `registerUpgradeHandler` throws and the module is skipped.
+
+**Client URL:** `wss://<host><apiBasePath><mountPath><path>?token=<access token>`.
+
+**What core checks before the handler runs:**
+- The URL must be under a module mount path that has a registered handler; otherwise `404` and the socket is closed. A module with no handler is always refused.
+- A login is required: `Authorization: Bearer` or `?token=`. The token is removed from `req.url` and `req.query` before the module sees it.
+- The module access check (`404` if the user has no access, the same as the HTTP gate), and the page check if `{ page }` is given (the same as `requirePage`).
+- A developer's "view as" identity is refused (`403`).
+- A request that is not a WebSocket upgrade answers `400`.
+
+**What the handler gets:** `req.user`, `req.query`, `req.moduleId` and `req.upgradePath`. The `socket` is the raw `net.Socket`. Core adds no `ws` dependency: the module brings its own `ws`.
+
+The production web server must pass upgrades through: see "WebSockets through the web server" in `docs/MFF-Core_dev-setup.md`. Sources: `App_backend/src/core/services/moduleUpgrade.js`, `tests/moduleUpgrade.test.js`.
 
 ### `getModuleConfig()` — your own non-database config, from core's one `.env`
 

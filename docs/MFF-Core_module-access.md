@@ -30,6 +30,8 @@ Both come from `App_backend/src/core/services/moduleAccessService.js`:
 1. **The module's API** — `moduleLoader.js` mounts an access gate in front of every module's router. An unrestricted module passes straight through, but **every module request needs a login, except the routes the module lists in `publicRoutes` in its manifest** (`docs/MFF-Core_module-manifest.md`). A restricted module answers `404` to anyone not granted.
 2. **The UI** — `GET /api/modules` is filtered per caller (it accepts an optional token and never answers 401; logged out, it returns the full list as before). The frontend builds the sidebar, Dashboard tabs and routes from that one list, so a hidden module vanishes everywhere. The list is re-fetched on login/logout.
 
+**WebSocket upgrades** (a module with `"websocket": true` and a handler registered with `coreApi.registerUpgradeHandler`) go through the same checks before the module's handler runs: a login (`Authorization: Bearer` or `?token=`), the module access check (`404` if the user has no access, the same as the HTTP gate), and the page check if the handler was registered with `{ page }`. A developer's "view as" identity is refused (`403`). See `docs/MFF-Core_module-core-api.md`, "WebSocket".
+
 A Dashboard tab remembered from an earlier visit, or requested with `?tab=`, that the user can no longer see quietly falls back to their first tab.
 
 ## What a module must do

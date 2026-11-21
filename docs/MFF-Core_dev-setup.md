@@ -13,7 +13,7 @@ On Debian 12/13, as a normal user with `sudo`, run:
 bash scripts/install.sh
 ```
 The installer:
-- Installs git, curl and openssl, nvm and Node 20, MariaDB, and Apache (and enables `proxy`, `proxy_http`, `headers`, `ssl` and `rewrite`).
+- Installs git, curl and openssl, nvm and Node 20, MariaDB, and Apache (and enables `proxy`, `proxy_http`, `proxy_wstunnel`, `headers`, `ssl` and `rewrite`).
 - Asks plain-English questions: the sub-folder (e.g. `/MFF-cloud`), the public origin, mail, and whether to write the Apache rules into an existing config or a separate site file.
 - Generates `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `DATA_ENCRYPTION_KEY`. It makes you confirm that you backed up the encryption key.
 - Writes `App_backend/.env` with mode `0600`. An existing `.env` is kept as `.env.bak-<time>`, and keys the installer does not manage are preserved.
@@ -23,6 +23,13 @@ The installer:
 - Writes the systemd unit and the Apache config (it runs the Apache configtest first, then reloads), and ends with health checks.
 
 In order, the steps are: tools, nvm/Node 20, MariaDB + Apache, `.env`, `npm ci`, `setup-database.js`, admin user, build, systemd unit, Apache rules, checks.
+
+### WebSockets through the web server
+
+A module that uses WebSockets (`"websocket": true`, `docs/MFF-Core_module-core-api.md`) needs the web server to pass upgrades through to the backend. The installer (`scripts/install.sh`, `render.js`) and the README already enable and write this for Apache. By hand:
+
+- **Apache:** enable `proxy_wstunnel` (`sudo a2enmod proxy_wstunnel`) and add `upgrade=websocket` to the API `ProxyPass` line, for example `ProxyPass /MFF-cloud-api http://127.0.0.1:5000/MFF-cloud-api upgrade=websocket` (`ProxyPassReverse` is unchanged). Then `sudo apachectl configtest && sudo systemctl restart apache2`.
+- **nginx (manual):** in the API `location`, add `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";`, and a long `proxy_read_timeout`.
 
 The installer does not set up modules: it does not ask whether you want modules, the provisioner account, `GITHUB_TOKEN` or `WORKSPACE_BASE_DIR`, and it does not run `setup-provisioner.js`. On a re-run it leaves any `DB_PROVISION_*`, `GITHUB_TOKEN`, `WORKSPACE_BASE_DIR` and `MODULE_<ID>_*` lines in an existing `.env` untouched, and it never writes them on a fresh install. To use modules, follow "After install: modules" below.
 
