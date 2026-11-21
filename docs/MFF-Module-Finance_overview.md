@@ -86,7 +86,7 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 **UI:**
 - A "Tips per plate" box at the top (manager roles).
 - "+ Add row": a user picker ("First Last (username)"), the usage login (defaulting to the username) and the tips. Edit and delete (manager roles).
-- Per-group total lines and an overall total.
+- One bordered table per group (a title bar with the group name and its PI(s), the user rows, and a shaded bold total line), separated by space. Then a summary table: per group the users, tips, plates, cost excl. salaries, cost direct and % of total, plus the grand total.
 - A disabled "Upload raw data" placeholder: not implemented, the module has no import.
 - A frozen year is read-only. Reading follows the page `usage`.
 
