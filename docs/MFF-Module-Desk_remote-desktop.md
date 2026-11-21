@@ -1,9 +1,9 @@
 # Desk module: Remote Desktop
 
-Module `desk` (mount `/desk`, version 0.1.10). It gives developers a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login.
+Module `desk` (mount `/desk`, version 0.1.11). It gives developers a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login.
 
 ## What the user sees
-One Dashboard tab and a sidebar entry, both named "Remote Desktop". The tab registers position 20 and the admin override `MODULE_DESK_DASHBOARD_POSITION`. Since mff-core 0.1.192 neither affects the order: tabs and sidebar entries are listed alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
+One Dashboard tab and a sidebar entry, both named "Remote Desktop". Core orders the tab and the sidebar entry alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
 
 ## How a session starts
 1. The button sends `POST /api/desk/session` (`authenticateToken` and `checkRole` `developer`).
