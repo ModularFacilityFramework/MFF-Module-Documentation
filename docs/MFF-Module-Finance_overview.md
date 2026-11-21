@@ -72,13 +72,14 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 ## Usage tab (MX only for now)
 
 **Data:**
-- `finance_usage_mx`: `year_id`, `user_id` (a core user), `login` (the username the robot's usage data carries), `group_id` (a fallback only), `tips` and `rate_basis` (VARCHAR(10) NOT NULL, default `excl`; `excl` = excluding salaries, `direct` = direct cost with salaries included). Unique per year and login. `rate_basis` is a column with a DEFAULT on an existing table, so core's schema diffing adds it on Update / Apply Schema.
+- `finance_usage_mx`: `year_id`, `user_id` (a core user), `login` (the username the robot's usage data carries), `group_id` (a fallback only), `tips` and `rate_basis` (VARCHAR(10) NOT NULL, default `excl`; `excl` = excluding salaries, `direct` = direct cost with salaries included, `ukri` = UKRI PhD). Unique per year and login. `rate_basis` is a column with a DEFAULT on an existing table, so core's schema diffing adds it on Update / Apply Schema.
 - `finance_usage_settings`: `year_id` and `mx_tips_per_plate` (default 104).
 
 **Rules:**
 - A group is never typed or stored as a fact. It is the user's current core group (`listUsers().group_id` named by `listGroups()`). A user core no longer lists keeps the group saved with the row.
 - `plates` = tips / tips per plate.
 - Each row has a Rate drop-down (`rate_basis`). The unit price is the year's Costing Model MX cost per plate of the chosen rate, from the service named "MX": `excl` = non-salary cost / quantity; `direct` = (salary + non-salary) / quantity. With no MX service the prices are empty and a warning is shown.
+- A third choice, "UKRI PhD" (`rate_basis` = `ukri`), gives a unit price of £0.00 and a total of £0.00 whatever the Costing Model says, and needs no MX service. Its plates and its % of group still count. Group and overall totals treat it as 0; they stay empty only if another row cannot be priced because the year has no MX service. The same rules apply as for the other choices: a manager-only write, refused (`423`) on a frozen year.
 - Total = plates x the unrounded unit price. Group and overall totals add the unrounded row totals and round once.
 - "% of group" = the row's plates / the group's plates.
 - Groups are sorted by name ("no group" last); people inside a group are sorted by first, then last name.
