@@ -18,6 +18,9 @@ This guide explains how administrators manage users, roles, and system configura
 - **Make inactive** replaces "Archive".
 - The user receives an email notification on status change.
 
+### User drop-downs
+User drop-downs everywhere read "First Last (username)", sorted by first name, then last name.
+
 ### Account types
 - **Standard** accounts can log in (login, refresh and password reset work only for standard accounts, and login only when the account is also active).
 - **No login** accounts are contacts/records: unusable password, no MFA, never log in, but still active/inactive, and can be a group member and a PI.
@@ -31,7 +34,7 @@ Setup → Users has a green **+ Create No-Login User** button (developer and adm
 - To let the person sign in later, edit the user, set Account type to Standard and give a password (see above).
 
 ### Groups screen
-- A group can have **several PIs**, exactly one of them primary. PIs are chosen from users (no-login accounts can be PIs). The group's PI name and email are a copy of the primary PI; a group with no linked PI keeps free text.
+- A group can have **several PIs**, exactly one of them primary. PIs are chosen from users (no-login accounts can be PIs). The PI selector offers only users whose job position is PI, so set a user's Job position to PI in Setup → Users first. PIs already linked to a group stay shown even if their position is not PI. The group's PI name and email are a copy of the primary PI; a group with no linked PI keeps free text.
 - A group needs only a name; PIs are optional.
 
 ### Job positions and statistics

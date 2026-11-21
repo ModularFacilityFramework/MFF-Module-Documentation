@@ -132,7 +132,7 @@ DELETE /users/:id
 ## Groups (`/groups`)
 
 - `GET /groups` — Protected (any authenticated user). Each group has `member_count` and `pis: [{ user_id, is_primary, username, first_name, last_name, name, email }]`, primary PI first.
-- `GET /groups/pi-candidates` — Protected, `developer`/`administrator`/`facility_manager`/`facility_staff`
+- `GET /groups/pi-candidates` — Protected, `developer`/`administrator`/`facility_manager`/`facility_staff` — per user: `id`, `username`, `email`, `account_type`, `status`, `name`, `first_name`, `last_name`, `job_position`, `is_pi`; sorted by first name, then last name
 - `POST /groups` — Protected, `developer`/`administrator`/`facility_manager` — Body: `{ group_name, pis: [{ user_id, is_primary }] }`. The name alone is valid. A `400` is returned for two primaries, a duplicate user, or an unknown user.
 - `PUT /groups/:id` — same roles as create. Same body; `pis: []` clears the PIs, and omitting `pis` leaves them unchanged. `pi_name`/`pi_email` are still accepted in the body, but only as legacy free text for a group with no linked PI (ignored once PIs are linked). `{ group_name, pis }` is the normal body.
 - A group can have several PIs, exactly one of them primary (kept by the app). `pi_name`/`pi_email` on the group are a derived copy of the primary PI; a group with no linked PI keeps free text there. No-login accounts can be PIs.
@@ -200,7 +200,7 @@ Ticket "staff" roles (`developer`, `administrator`, `facility_manager`, `facilit
 - `POST /tickets` — Protected (any authenticated user) — Body: `{ title, category?, priority?, description }`
 - `PUT /tickets/:id` — Protected, staff only — Body: `{ status }`
 - `POST /tickets/:id/response` — Protected — staff or the ticket's own owner — Body: `{ response }`
-- `GET /tickets/notification-users` — Protected, staff only — users configured to receive ticket notification emails
+- `GET /tickets/notification-users` — Protected, staff only — users configured to receive ticket notification emails; sorted by first name, then last name
 - `PUT /tickets/:id/assign` — Protected, staff only — Body: `{ assigned_to_id }`
 - `DELETE /tickets/:id` — Protected, staff only
 

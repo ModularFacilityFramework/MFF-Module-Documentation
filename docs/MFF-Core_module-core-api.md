@@ -13,7 +13,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     pool,                                 // core's own MariaDB connection pool (see caveat below)
     listRoles,                            // () => Promise<string[]> - every role name that exists in this installation
     getUserRoles,                         // (req.user) => Promise<string[]> - the role names THIS user holds (see "The current user's roles")
-    listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, roles: string[]}>>
+    listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, job_position, is_pi, roles: string[]}>>
     listGroups,                           // () => Promise<Array<{id, group_name, archived_at}>> - see "`listGroups()`"
     getGroupPis, listGroupPis,            // see "`getGroupPis(groupId)` / `listGroupPis()`"
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
@@ -64,10 +64,14 @@ Reads `setup_roles` directly — the same table `checkRole` itself is ultimately
 
 ```js
 const users = await coreApi.listUsers();
-// [{ id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, roles: ['administrator'] }, ...]
+// [{ id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, job_position, is_pi, roles: ['administrator'] }, ...]
 ```
 `account_type` is `standard` or `no_login` (a no-login account is a contact/record that never logs in, but is still listed and can be a group member or PI); `registration_pending` is 1 for a self-registration an admin has not approved or rejected yet.
-Deliberately simple — full list, no pagination/search/sort (that complexity lives only in `GET /users`, the admin UI's own endpoint, and isn't duplicated here). If a real need for paginated backend-side access ever comes up, this is the function to extend, not a new one to add.
+Sorted by first name, then last name, then username (case-insensitive); it used to be sorted by id (v0.1.199). `job_position` is the job position's name, or null. `is_pi` is a boolean: true when the job position is named "PI". Core has no separate `is_pi` column; the job position named "PI" is the marker.
+
+**UI rule for modules:** show a user in every drop-down as "First Last (username)", sorted by first name then last name (core's own drop-downs do). A PI or supervisor picker lists only users with `is_pi`. A group PI that is already linked stays displayed even if their position is not PI.
+
+Deliberately simple — full list, no pagination or search, and a fixed sort (that complexity lives only in `GET /users`, the admin UI's own endpoint, and isn't duplicated here). If a real need for paginated backend-side access ever comes up, this is the function to extend, not a new one to add.
 
 ### `listGroups()`
 
