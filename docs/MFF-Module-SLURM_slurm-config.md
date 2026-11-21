@@ -36,7 +36,7 @@ None of the variables below are declared `"required": true` in the manifest - th
 
 ## Dependencies
 
-Module version 0.1.37 (Allocations changes in 0.1.38 and 0.1.39). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
+Module version 0.1.37 (Allocations changes in 0.1.38 and 0.1.39; `gpu-capacity` and people display in 0.1.40). The module `requires` `finance` and sets `actsAsUsers: true` in its manifest (`docs/MFF-Core_module-manifest.md`). Finance must therefore be installed before slurm can be installed or updated, and finance cannot be removed while slurm is installed. `actsAsUsers` is used by the Allocations tab's daily run, which calls finance with no request in flight (`coreApi.callModuleAsUser`, see `docs/MFF-Core_module-core-api.md`).
 
 ## What this module does NOT do
 
@@ -158,6 +158,10 @@ HTTP routes (all under `/api/slurm`, administrator only):
 - `GET /config/files`, `/config/changes`, `/config/changes/:id`
 - `POST /config/preview`, `/config/apply`, `/config/changes/:id/rollback`
 
+### How people are shown
+
+In the Users tab, people are shown as "First Last (username)" and sorted by first name, then last name, case-insensitively. Slurm-only accounts without an MFF user are shown by their user name. The Audit tab and the config history show the acting user the same way.
+
 ## Editing the Slurm configuration (Config tab)
 
 Edits `slurm.conf` and `gres.conf` (`SLURM_CONF_FILES`). Flow: edit, then Review, then explicit confirmation, then a backup of the previous content in table `slurm_config_change`, then write to the controller first and then every node (5 at a time, read back and hash-verified) over SSH, then make it effective, then a health check, then automatic rollback if anything fails.
@@ -266,6 +270,17 @@ Every route below requires (in order):
 
    This is a different rejection from the per-job ownership
    check below - "you're not a Slurm user at all" vs. "this isn't your job".
+
+### `GET /gpu-capacity`
+
+Added in module version 0.1.40. Used by the finance module for its "GPUs allocated vs the cluster's real GPUs" total line. Reached as `/api/slurm/external/gpu-capacity` (`coreApi.callModule(userToken, 'slurm', 'GET', '/external/gpu-capacity')`).
+
+- **Access:** a valid session and one of the roles `developer`, `administrator`, `facility_manager`, `facility_staff`. The caller need **not** be a Slurm user, and there is no page gate (so the Slurm-access gate above does not apply).
+- **Response `200`:** `{ totalGpus, availableGpus, basis, nodes, nodesWithGpus, generatedAt }`.
+  - `totalGpus` is the sum of the GPUs in the GRES of every node Slurm defines. Typed (`gpu:model:N`) and untyped (`gpu:N`) entries are counted; other GRES are ignored.
+  - `availableGpus` is the same sum excluding nodes that are DOWN, DRAIN, UNK or NOT_RESPONDING.
+- A Slurm failure answers `502 { success: false, message }`.
+- **Module access:** finance cannot list `slurm` in its manifest `requires` (that would be circular), so core applies slurm's module-level access to the calling user. An administrator must grant the `slurm` module (Setup → Preferences → Modules → Access) to the finance staff roles; otherwise finance shows "cluster size unknown".
 
 ### `GET /resource-profile?gpuCount=N`
 
