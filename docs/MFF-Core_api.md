@@ -268,9 +268,9 @@ Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 
 
 "Update all" on the Modules page (`docs/MFF-Core_module-install-finalize.md`, "Update all"). `developer`/`administrator` only.
 
-- `GET /modules-management/update-all/preview` — checks every installed module with `git fetch`. Response: `{ updates: [{ id, label, from, to, behind }], unchecked: [{ id, reason }] }`
+- `GET /modules-management/update-all/preview` — checks every installed module with `git fetch`. The page does not use this route any more. Response: `{ updates: [{ id, label, from, to, behind }], unchecked: [{ id, reason }] }`
 - `POST /modules-management/update-all` — starts the job. Body: `{ modules?: [ids] }` (only the named modules that still have an update). Response: `{ job, updates, unchecked, message }`
-- `GET /modules-management/job` — the latest job, with `modules: [{ id, label, from, to, status, step, message }]` (`status` is `pending`, `running`, `done` or `failed`) and `failedModules`.
+- `GET /modules-management/job` — the latest job, with `modules: [{ id, label, from, to, behind, status, step, message }]` (`status` is `pending`, `running`, `done` or `failed`) and `failedModules`.
 
 ## Reports (`/reports`)
 

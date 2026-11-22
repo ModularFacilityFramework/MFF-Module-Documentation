@@ -51,9 +51,9 @@ Update skips the build and restart only when all of these hold: the pull says "A
 
 The "Update all" button on the Modules page (core v0.1.209; developer/administrator only) updates every installed module that has new commits, in ONE background job. It uses the same `App_backend/.module-job.json` as a single Update, so nothing else runs meanwhile. The job status is `updating`, then the usual `building`, `swapping` and `restarting`.
 
-Before the job, the button checks each installed module with `git fetch` and shows ONE confirmation dialog. It lists every module that has new commits (the version now -> the version in the remote manifest, and the commit count). Modules that cannot be checked (no upstream, or the fetch failed) are named in the dialog.
+Clicking "Update all" starts the job at once: there is no confirmation dialog, and the page makes no preview call. The job checks each installed module with `git fetch`. The modules being updated show in the progress area with the version change and the commit count (for example "1.0.0 -> 1.1.0, 3 new commits") and the result of each step. If nothing needs updating, the page shows a short inline note ("Every installed module is already up to date", plus any module that could not be checked: no upstream, or the fetch failed) and no job starts.
 
-After confirming, the job does these steps:
+The job does these steps:
 1. **Database backup** of every module being updated, to `backups/modules/<id>/`. A module whose database cannot be backed up is not touched.
 2. **`git pull`** of each module, the modules in its manifest `requires` first. Its `npm ci` runs only if `package.json` or `package-lock.json` changed (or `node_modules` is missing). A pull blocked by local changes, or a required module that is now missing, fails that module.
 3. **Schema sync and config check** of each module, in dependency order: what Update and Apply Schema do (new tables, new columns). There is no second backup.
