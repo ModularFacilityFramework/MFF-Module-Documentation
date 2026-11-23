@@ -280,6 +280,10 @@ Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 
 - `GET /reports/job-roles-distribution?groupId=` — same roles — chart shape: **active** users per job position, "Not set" for none. `groupId` omitted = everyone; `groupId=0` = users with no group; a non-integer or negative value is a `400`.
 - `GET /reports/:name.csv` — Protected, `administrator` only — CSV export; `name` must be `users` or `files`. `users.csv` has the columns `first_name,last_name,username,email,status,created_at,id` (it used to be `id,username,email,status,created_at`) and its rows are sorted by name
 
+## Directory (`/directory`)
+
+- `GET /directory?search=&limit=` — Protected (any logged-in user); `limit` is at most 100. Response: `{ users: [{ id, username, label }], groups: [{ id, label }] }`. Active standard accounts and non-archived groups only; no email and no roles. It supplies the candidates of the shared `ShareDialog` (`docs/MFF-Core_module-core-api.md`, "Projects").
+
 ## Search (`/search`)
 
 - `GET /search?q=<term>` — Protected — aggregated results across users and files (top 10 each); user results are sorted by name

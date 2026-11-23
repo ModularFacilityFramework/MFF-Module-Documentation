@@ -15,6 +15,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     getUserRoles,                         // (req.user) => Promise<string[]> - the role names THIS user holds (see "The current user's roles")
     listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, job_position, is_pi, roles: string[]}>>
     listGroups,                           // () => Promise<Array<{id, group_name, archived_at}>> - see "`listGroups()`"
+    getModulesForUser,                    // (user) => Promise<Array<{id, label, version}>> - the modules this user may use right now, see "`getModulesForUser(user)`"
     getGroupPis, listGroupPis,            // see "`getGroupPis(groupId)` / `listGroupPis()`"
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
     callModule,                           // (token, moduleId, method, path, opts) => Promise<{ok, status, data, error}> - see below
@@ -83,6 +84,14 @@ const groups = await coreApi.listGroups();
 Every group in `setup_groups`, archived ones included and marked (`archived_at` non-null = archived, null = active), ordered by `group_name` then `id`. Read-only. `id` is a plain number. Use it instead of raw SQL on `setup_groups`. Example: map a group id from `listUsers()` (`group_id`) to the group's current name.
 
 Available from core v0.1.197. A module that must also run on an older core can feature-detect with `typeof coreApi.listGroups === 'function'`.
+
+### `getModulesForUser(user)`
+
+```js
+const modules = await coreApi.getModulesForUser(req.user);
+// [{ id, label, version }, ...]
+```
+The modules that user may use right now, with module access applied (`docs/MFF-Core_module-access.md`). Available from core v0.1.211.
 
 ### `getGroupPis(groupId)` / `listGroupPis()`
 
@@ -170,6 +179,11 @@ const ws = await coreApi.getUserWorkspacePathForUserId(userId);
 - **Mechanism.** Core mints an access token for the user, valid 60 seconds, with a claim `bg: { by, target }`, and uses it only on a loopback call to the target module. The token is valid only on that module's mount path (anywhere else, for example a core route, answers `401`). The calling module never sees the token. The target sees the user as `req.user`, with `req.user.backgroundBy` set to the calling module's id. The delegation header is the same as for `callModule`, so the user needs no grant on the target. The target's `authenticateToken`, `checkRole` and ownership logic still apply to that user.
 - **Audit.** Every call, allowed or refused, writes a log line (`audit: module_background`) and a row in `core_module_background_audit` (`docs/MFF-Core_db-schema.md`).
 
+### How a module sees a delegated or background call
+
+- `req.delegatedFrom` is set on a delegated call, that is a valid signed delegation header. The caller must list the target in its manifest `"requires"`.
+- `req.user.backgroundBy` is set on a background call (`callModuleAsUser`): a 60 s token, valid only on the target module's mount path, never combined with a developer's "view as".
+
 ### WebSocket: `registerUpgradeHandler`
 
 ```js
@@ -229,6 +243,8 @@ You get core's raw connection pool because some things (like the two functions a
     useRoles,                                  // (userData) => { roles: string[], hasRole, hasAnyRole, hasAllRoles, canManageUsers } - see "The current user's roles"
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
     usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
+    registerProjectsProvider,                  // (provider) => void - only the module that owns projects (Science) registers; see "Projects"
+    ui: { ProjectPicker, ShareDialog },        // shared components - see "Projects"
     getAllRoles,                               // () => Promise<string[]>
     getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
     DrillDownPie, fetchSlices, normalizeSlices // the shared pie chart - see "Charts: the shared drill-down pie"
@@ -336,6 +352,26 @@ Thin wrapper over `GET /files/available-roles` (the endpoint's own path, kept as
 const { items, total } = await coreApi.getAllUsers({ search: 'smith', sortBy: 'username' });
 ```
 Thin, full pass-through to `GET /users` — same admin-only role gate, same pagination/search/sort query params that endpoint already supports (`page`, `limit`, `sortBy`, `sortDir`, `search`). It is **not** a new capability — a module could already reach this exact endpoint via `coreApi.apiGet('/users', { params })`; this is purely a named, documented shortcut. It inherits whatever the *current* logged-in user is actually allowed to see — a non-administrator calling this gets the same 403 core's own UI would get.
+
+### Projects: `registerProjectsProvider`, `ProjectPicker`, `ShareDialog`
+
+Core v0.1.211. One module owns projects (Science); the others never import it.
+
+**`coreApi.registerProjectsProvider(provider)`.** Only the owner module registers. The provider is:
+- `list({ scope: 'mine' | 'shared' | 'all', search, includeArchived })` returning `Project[]`
+- `get(id)` returning a `Project` or `null`
+- `create({ title, description })`, optional; without it the "+ New project" button is hidden
+
+A `Project` is `{ id, number, title, owner_label, access, can_write, can_manage, archived, item_count, updated_at }`.
+
+**`<coreApi.ui.ProjectPicker mode="single"|"multi" rememberAs="module.page.what" value onChange(idOrIds, projectOrProjects) requireWrite includeArchived />`.** One look in every module:
+- a search box; the tabs "My projects", "Shared with me" and "All" ("All" only for administrators and developers);
+- the most recently used first (remembered per user across modules); the chosen projects as chips; "+ New project"; rows that show the number, title, owner and a read/write badge;
+- with `requireWrite`, read-only projects are greyed out with the reason;
+- `rememberAs` is a page-state key: the selection, the tab and the search survive leave, return and reload. A remembered project that is gone, archived or no longer writable is dropped quietly and reported through `onChange` (`null` or `[]`). On the first render with a remembered selection, `onChange` is called once with `(id, null)` or `(ids, null)`;
+- with no provider registered it shows "Projects are not available here".
+
+**`<coreApi.ui.ShareDialog title levels=[{ value, label }] loadGrants() onGrant({ type, id, level }) onRevoke({ type, id }) onClose />`.** Generic: the owner module supplies what a grant is. `loadGrants()` returns `[{ type: 'user' | 'group', id, label, level }]`. Candidates come from `GET /directory` (`docs/MFF-Core_api.md`).
 
 ### `usePageState`: page state persistence
 
