@@ -95,6 +95,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 | [`MFF-Module-Finance_overview.md`](docs/MFF-Module-Finance_overview.md) | Finance module (`finance`) |
 | [`MFF-Module-Finance_api-and-config.md`](docs/MFF-Module-Finance_api-and-config.md) | Finance module — API, files and configuration |
 | [`MFF-Module-Pandda2Inspect_config.md`](docs/MFF-Module-Pandda2Inspect_config.md) | pandda2inspect module configuration |
+| [`MFF-Module-Science_projects.md`](docs/MFF-Module-Science_projects.md) | Science module — projects, sharing, materials (API for other modules) |
 | [`MFF-Module-SLURM_slurm-config.md`](docs/MFF-Module-SLURM_slurm-config.md) | SLURM module configuration |
 
 ## The module (`documentation`)
