@@ -111,7 +111,7 @@ The 2025-2026 table was loaded once by a throw-away script kept outside the repo
 - The form is `backend/templates/IPR_Structural_Biology_Template.docx` (converted once from the facility's old Word `.doc`).
 - Only the click date (dd/mm/yyyy) and one line per row of the group's Usage table are written. The date goes in the DATE box of the right-hand (selling school) block, the DATE on the REQUESTED BY (NAME) row, above ENTERED BY. The DATE box beside OWN REF NUMBER in the left block stays empty (it was filled in 0.1.41 and 0.1.42). The cell is found by the labels REQUESTED BY (NAME) / DATE. Moved "for <group>" rows are included.
 - Line columns: Order Reference = "MX" (fixed); Description = "MX – First Last"; Order Unit = the unit of the year's Costing Model service "MX"; Quantity = the row's plates; Agreed Price = the row's unit price, so it follows the row's selected rate (0 for UKRI PhD); Total Amount = the row's Total.
-- After the group's lines there is one more row. Only its Total Amount cell is filled, with the sum of the lines' Total Amounts (2 decimals, added in pence). Every other cell in that row is empty.
+- After the group's lines there is one more row, the last of the line table. It fills two cells: Quantity = the sum of the lines' quantities (plates, in the same format as the lines), and Total Amount = the sum of the lines' Total Amounts (2 decimals, added in pence). Every other cell in that row is empty.
 - Left blank: Date Goods/Services Required, Account to be Charged and Cost Element. Everything else is the template's.
 - The cells are found by their printed labels, so a re-saved copy of the form can replace the template file.
 
