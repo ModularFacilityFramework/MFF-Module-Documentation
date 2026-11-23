@@ -100,10 +100,19 @@ Totals (the Costing Model charge total, the Recovery totals, the Summary PhD con
 - A "Tips per plate" box at the top (manager roles).
 - "+ Add row": a user picker ("First Last (username)"), the usage login (defaulting to the username) and the tips. Edit and delete (manager roles). Changing the rate is a manager-only write, refused (`423`) on a frozen year.
 - One bordered table per group (a title bar with the group name and its PI(s), the user rows, and a shaded bold total line), separated by space. The columns are User, Usage login, Tips, Plates, Rate, Unit price, Total and % of group. Then a summary table with the columns Group, Users, Tips, Plates, Total and % of total, plus the grand total.
+- A "Generate IPR" button in each group's title bar (see "Generate IPR" below).
 - A disabled "Upload raw data" placeholder: not implemented, the module has no import.
 - A frozen year is read-only. Reading follows the page `usage`.
 
 The 2025-2026 table was loaded once by a throw-away script kept outside the repository (`master/migration/finance`); it is not a module feature.
+
+**Generate IPR.** Each group's title bar has a "Generate IPR" button. It calls `GET /usage/year/:yearId/ipr?groupId=N[&date=YYYY-MM-DD]` and returns the group's prefilled Internal Purchasing Requisition as a `.docx` (no schema step).
+- It is read-only: Usage page access only, and it works on a frozen year. The browser sends its own date; otherwise the server's day is used.
+- The form is `backend/templates/IPR_Structural_Biology_Template.docx` (converted once from the facility's old Word `.doc`).
+- Only the DATE box next to OWN REF NUMBER (dd/mm/yyyy) and one line per row of the group's Usage table are written. Moved "for <group>" rows are included.
+- Line columns: Order Reference = "MX" (fixed); Description = "MX – First Last"; Order Unit = the unit of the year's Costing Model service "MX"; Quantity = the row's plates; Agreed Price = the row's unit price, so it follows the row's selected rate (0 for UKRI PhD); Total Amount = the row's Total.
+- Left blank: Date Goods/Services Required, Account to be Charged and Cost Element. Everything else is the template's.
+- The cells are found by their printed labels, so a re-saved copy of the form can replace the template file.
 
 ## Page state
 
