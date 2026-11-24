@@ -393,12 +393,13 @@ A `Project` is `{ id, number, title, owner_label, access, can_write, can_manage,
 
 Core v0.1.213. Use these instead of writing your own drop-down; they follow the sorting and label rules in "UI rule for modules" under `listUsers()`.
 
-**`<coreApi.ui.UserPicker mode="single"|"multi" value onChange includeNoLogin placeholder label disabled rememberAs />`**
+**`<coreApi.ui.UserPicker mode="single"|"multi" value onChange includeNoLogin showUsername placeholder label disabled rememberAs />`**
 - `value` is a user id (`mode="single"`) or an array of ids (`mode="multi"`). `onChange(idOrIds, userOrUsers)` is called with the id(s) and the user object(s); clearing a single picker gives `onChange(null, null)`.
 - A `user` is `{ id, username, first_name, last_name, account_type, inactive, label }`.
 - Searchable. The label is "First Last (username)"; a no-login contact gets " - no login" and a stored person who has since been disabled gets " (inactive)". Sorted by first name, then last name.
 - By default it offers active accounts that can log in. `includeNoLogin` also offers active no-login contacts. Inactive accounts and pending registrations are never offered for a new choice. A stored `value` is looked up by id and still shown even if the person has been disabled since.
 - `rememberAs` is a page-state key (see "`usePageState`"); it is used only when no `value` is passed.
+- `showUsername` (default `true`, core v0.1.215). `showUsername={false}` shows "First Last" instead of "First Last (username)" in the list rows, the chosen chip and the chip's Remove label. The " - no login" and " (inactive)" tags stay, the search still matches the username, and a user with no name still shows the username.
 
 **`<coreApi.ui.GroupPicker value onChange />`** — `value` is a group id; `onChange(id|null, { id, label })`. Non-archived groups only. A plain select, no free text.
 
