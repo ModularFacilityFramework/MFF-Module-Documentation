@@ -76,6 +76,8 @@ Do not rename or delete a document without checking who refers to it: other repo
 | File | Title |
 |---|---|
 | [`MFF-Module_ABCFold_dev-setup.md`](docs/MFF-Module_ABCFold_dev-setup.md) | ABCFold — Dev setup |
+| [`MFF-Module-AI_user-guide.md`](docs/MFF-Module-AI_user-guide.md) | AI module (`ai`) — user guide |
+| [`MFF-Module-AI_config.md`](docs/MFF-Module-AI_config.md) | AI module — installation and administration |
 | [`MFF-Module-AlphaPulldown_overview.md`](docs/MFF-Module-AlphaPulldown_overview.md) | AlphaPulldown module (`alphapulldown`) — overview |
 | [`MFF-Module-AlphaPulldown_library.md`](docs/MFF-Module-AlphaPulldown_library.md) | AlphaPulldown module — shared proteome and feature library |
 | [`MFF-Module-AlphaPulldown_target.md`](docs/MFF-Module-AlphaPulldown_target.md) | AlphaPulldown module — Target tab |
