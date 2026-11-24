@@ -15,6 +15,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     getUserRoles,                         // (req.user) => Promise<string[]> - the role names THIS user holds (see "The current user's roles")
     listUsers,                            // () => Promise<Array<{id, username, email, first_name, last_name, status, account_type, registration_pending, group_id, job_position, is_pi, roles: string[]}>>
     listGroups,                           // () => Promise<Array<{id, group_name, archived_at}>> - see "`listGroups()`"
+    listJobPositions,                     // () => Promise<Array<{id, name}>> - core's job positions, see "`listJobPositions()`"
     getModulesForUser,                    // (user) => Promise<Array<{id, label, version}>> - the modules this user may use right now, see "`getModulesForUser(user)`"
     getGroupPis, listGroupPis,            // see "`getGroupPis(groupId)` / `listGroupPis()`"
     getUserWorkspacePath,                 // (user) => Promise<{active, path, reason}> - see below
@@ -73,6 +74,13 @@ Sorted by first name, then last name, then username (case-insensitive); it used 
 
 **UI rule for modules:** the rule applies to every list of people a module shows (tables, pickers, exports), not only drop-downs: sort by first name, then last name, case-insensitive, and label a user "First Last (username)" wherever a username is shown (core's own lists do). A PI or supervisor picker lists only users with `is_pi`. A group PI that is already linked stays displayed even if their position is not PI.
 
+**What counts as a real person.** Core v0.1.213:
+- There is no deleted marker: deleting a user is a hard `DELETE`, so a user in the list exists.
+- A row with `registration_pending = 1` (a self-registration nobody has approved) is skipped.
+- `status = 'inactive'` means disabled by an admin. This applies to no-login contacts too, which are created active by default.
+- `account_type` `standard` can log in; `no_login` is a contact that never logs in.
+- A user has one group (`group_id`) and one job position (`job_position_id`), each nullable. The PIs of other groups are in `setup_group_pis` (see `getGroupPis(groupId)` / `listGroupPis()`).
+
 Deliberately simple — full list, no pagination or search, and a fixed sort (that complexity lives only in `GET /users`, the admin UI's own endpoint, and isn't duplicated here). If a real need for paginated backend-side access ever comes up, this is the function to extend, not a new one to add.
 
 ### `listGroups()`
@@ -84,6 +92,14 @@ const groups = await coreApi.listGroups();
 Every group in `setup_groups`, archived ones included and marked (`archived_at` non-null = archived, null = active), ordered by `group_name` then `id`. Read-only. `id` is a plain number. Use it instead of raw SQL on `setup_groups`. Example: map a group id from `listUsers()` (`group_id`) to the group's current name.
 
 Available from core v0.1.197. A module that must also run on an older core can feature-detect with `typeof coreApi.listGroups === 'function'`.
+
+### `listJobPositions()`
+
+```js
+const positions = await coreApi.listJobPositions();
+// [{ id, name }, ...]
+```
+Core's job positions, read-only. Available from core v0.1.213.
 
 ### `getModulesForUser(user)`
 
@@ -244,7 +260,7 @@ You get core's raw connection pool because some things (like the two functions a
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
     usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
     registerProjectsProvider,                  // (provider) => void - only the module that owns projects (Science) registers; see "Projects"
-    ui: { ProjectPicker, ShareDialog },        // shared components - see "Projects"
+    ui: { ProjectPicker, ShareDialog, UserPicker, GroupPicker, JobPositionPicker },  // shared components - see "Projects" and "People, group and job position pickers"
     getAllRoles,                               // () => Promise<string[]>
     getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
     DrillDownPie, fetchSlices, normalizeSlices // the shared pie chart - see "Charts: the shared drill-down pie"
@@ -372,6 +388,25 @@ A `Project` is `{ id, number, title, owner_label, access, can_write, can_manage,
 - with no provider registered it shows "Projects are not available here".
 
 **`<coreApi.ui.ShareDialog title levels=[{ value, label }] loadGrants() onGrant({ type, id, level }) onRevoke({ type, id }) onClose />`.** Generic: the owner module supplies what a grant is. `loadGrants()` returns `[{ type: 'user' | 'group', id, label, level }]`. Candidates come from `GET /directory` (`docs/MFF-Core_api.md`).
+
+### People, group and job position pickers: `UserPicker`, `GroupPicker`, `JobPositionPicker`
+
+Core v0.1.213. Use these instead of writing your own drop-down; they follow the sorting and label rules in "UI rule for modules" under `listUsers()`.
+
+**`<coreApi.ui.UserPicker mode="single"|"multi" value onChange includeNoLogin placeholder label disabled rememberAs />`**
+- `value` is a user id (`mode="single"`) or an array of ids (`mode="multi"`). `onChange(idOrIds, userOrUsers)` is called with the id(s) and the user object(s); clearing a single picker gives `onChange(null, null)`.
+- A `user` is `{ id, username, first_name, last_name, account_type, inactive, label }`.
+- Searchable. The label is "First Last (username)"; a no-login contact gets " - no login" and a stored person who has since been disabled gets " (inactive)". Sorted by first name, then last name.
+- By default it offers active accounts that can log in. `includeNoLogin` also offers active no-login contacts. Inactive accounts and pending registrations are never offered for a new choice. A stored `value` is looked up by id and still shown even if the person has been disabled since.
+- `rememberAs` is a page-state key (see "`usePageState`"); it is used only when no `value` is passed.
+
+**`<coreApi.ui.GroupPicker value onChange />`** — `value` is a group id; `onChange(id|null, { id, label })`. Non-archived groups only. A plain select, no free text.
+
+**`<coreApi.ui.JobPositionPicker value onChange />`** — `value` is a job position id; `onChange(id|null, { id, name })`. A plain select over core's job positions.
+
+For both selects, a stored id that is no longer offered shows "(not available: id)".
+
+The pickers read `GET /directory`, `GET /directory/groups` and `GET /directory/job-positions` (`docs/MFF-Core_api.md`, "Directory").
 
 ### `usePageState`: page state persistence
 
