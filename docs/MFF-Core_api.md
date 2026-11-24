@@ -270,6 +270,8 @@ Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 
 
 - `GET /modules-management/update-all/preview` — checks every installed module with `git fetch`. The page does not use this route any more. Response: `{ updates: [{ id, label, from, to, behind }], unchecked: [{ id, reason }] }`
 - `POST /modules-management/update-all` — starts the job. Body: `{ modules?: [ids] }` (only the named modules that still have an update). Response: `{ job, updates, unchecked, message }`
+- `GET /modules-management/available` — the modules that can be installed. Core no longer filters repos by name: every repo of the `ModularFacilityFramework` organisation (all pages of the GitHub listing, not just the first 100) whose default branch has a valid `module.manifest.json` with an `id` is a candidate, whatever the repo is called. Each entry has `id`, `label`, `repo`, `duplicateId`, `archived`, `alreadyCloned`, `pendingRestart`, `requires`, `requirementsError` and `missingRequirements`. The response also has `skippedRepos: [{ repo, reason }]` (repos without a usable manifest) and `reposSeen: [names]`. The result is cached for 10 minutes; an Install refreshes it.
+- `POST /modules-management/:id/install` — installs a module. Body: `{ repo }` (optional) installs that repo. Without `repo`, an id declared by exactly one repo installs as before; an id declared by several repos answers `409` listing the repos; a `repo` that does not declare the id answers `404`.
 - `GET /modules-management/job` — the latest job, with `modules: [{ id, label, from, to, behind, status, step, message }]` (`status` is `pending`, `running`, `done` or `failed`) and `failedModules`.
 
 ## Reports (`/reports`)
