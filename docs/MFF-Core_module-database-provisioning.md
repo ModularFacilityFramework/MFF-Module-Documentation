@@ -92,7 +92,7 @@ Database and username are both derived as `mff_module_<id>`. Module ids are alre
 
 ## Manual recovery: orphaned module database
 
-This happens if a module's database was provisioned successfully, but its `.env` was later lost — most likely from manually deleting `App_frontend/src/core/<id>/` without first dropping its database, or from disk/backup issues that took the `.env` but not the database.
+This happens if a module's database was provisioned successfully, but its `MODULE_<ID>_DB_*` lines in `App_backend/.env` were later lost — most likely from hand-editing or restoring `.env`, or from manually deleting `App_frontend/src/core/<id>/` without first dropping its database.
 
 The provisioning account deliberately has no `SELECT` privilege anywhere (see above) — it cannot read the orphaned database's data, so it cannot back it up before resetting its user's password. Rather than silently generate a new password that won't match the surviving database (leaving the module unable to connect, with no error until first use), `ensureModuleDatabase()` detects this state and fails loudly instead.
 
@@ -100,9 +100,7 @@ To recover manually:
 1. Connect with full admin access (not the provisioning account) and inspect `mff_module_<id>` to confirm what's actually there.
 2. Back it up yourself: `mysqldump -h <host> -u root -p mff_module_<id> | gzip > recovery.sql.gz`.
 3. Decide: reset the existing user's password (`ALTER USER 'mff_module_<id>'@'<host>' IDENTIFIED BY '<new password>'`), **or** drop the database/user entirely and let Install/Update provision it fresh (losing the module's data — only do this if the backup in step 2 is not actually needed, or has already been restored elsewhere).
-4. Where the new password goes depends on which mechanism this specific module's own `backend/config/database.js` actually reads, and the two are not interchangeable — writing credentials to the wrong one leaves the module just as broken, silently:
-   - **Module already migrated to reading DB config via `coreApi.getModuleConfig()`** (the target architecture — see "What a module needs to provide" above): add the values as plain lines in the one real `App_backend/.env`, namespaced `MODULE_<ID>_DB_HOST`/`_DB_USER`/`_DB_PASSWORD`/`_DB_NAME` (module id upper-cased), then restart core's backend so it re-reads `.env`. **Never** create or write `App_frontend/src/core/<id>/.env` for a module in this state — CLAUDE.md's "exactly one `.env` in the entire system" rule applies here same as anywhere else, and a stray module-local file is either ignored (harmless clutter) or, worse, silently authoritative if the module's code still checks for it as a fallback.
-   - **Module still on the legacy mechanism** (hasn't migrated yet — true for every module as of this writing; see "What's still legacy" above): hand-write `App_frontend/src/core/<id>/.env` with those exact values, exactly as this section originally said. This is the only case where a module-local `.env` is correct, not a workaround.
+4. Put the credentials back in `App_backend/.env`, the one `.env` in the system: re-add the four lines `MODULE_<ID>_DB_HOST`, `MODULE_<ID>_DB_USER`, `MODULE_<ID>_DB_PASSWORD` and `MODULE_<ID>_DB_NAME` (module id upper-cased), with the new password from step 3, then restart core's backend so it re-reads `.env`. These are the only place core writes and reads a module's database credentials (`moduleDatabaseProvisioner.js`); there is no module-local `.env` and no fallback to one, so never create `App_frontend/src/core/<id>/.env`. A module reads the values through `coreApi.getModuleConfig()` (keys `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`; no `DB_PORT` or connection limit is written).
 
 ## Schema diffing — new columns on already-existing tables
 
