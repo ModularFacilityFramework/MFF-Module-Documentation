@@ -1,9 +1,0 @@
-{
-  "id": "documentation",
-  "label": "Documentation",
-  "version": "0.1.0",
-  "tablePrefix": "documentation_",
-  "mountPath": "/documentation",
-  "backendEntry": "backend/index.js",
-  "frontendEntry": "frontend/index.js"
-}
