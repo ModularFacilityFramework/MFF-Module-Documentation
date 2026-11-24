@@ -406,6 +406,10 @@ Core v0.1.213. Use these instead of writing your own drop-down; they follow the 
 
 For both selects, a stored id that is no longer offered shows "(not available: id)".
 
+**Pick or type (`allowFreeText`), core v0.1.214.** `UserPicker` (single mode), `GroupPicker` and `JobPositionPicker` also take `allowFreeText`, `text` and `onTextChange(text)`, for a person, group or position that is not in the app. Typed text has no id and core never validates it; the module stores the id (when set) plus the text.
+- `UserPicker`: typing in the search box adds a last row `Use "<text>" (not in the app)`. Choosing it calls `onChange(null, null)` and `onTextChange(text)`, and shows a chip "<text> (not in the app)". Choosing a person calls `onChange(id, user)` and `onTextChange('')`. `text` is the typed name (controlled); with `rememberAs` and no `text` prop it is remembered under `<rememberAs>.text`. Multi mode ignores `allowFreeText`.
+- `GroupPicker` and `JobPositionPicker`: a last option "Other (type a name)" shows a text box (placeholder from the `textPlaceholder` prop). Picking a core value clears the text (`onTextChange('')`); choosing Other after a core value calls `onChange(null, null)`; a given `text` with no id opens on Other.
+
 The pickers read `GET /directory`, `GET /directory/groups` and `GET /directory/job-positions` (`docs/MFF-Core_api.md`, "Directory").
 
 ### `usePageState`: page state persistence
