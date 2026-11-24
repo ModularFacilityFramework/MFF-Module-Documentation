@@ -284,11 +284,11 @@ Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 
 
 ## Directory (`/directory`)
 
-- `GET /directory?search=&limit=` — Protected (any logged-in user); `limit` is at most 100. Response: `{ users: [{ id, username, label, first_name, last_name, account_type, inactive }], groups: [{ id, label }] }`. By default active standard accounts and non-archived groups only; no email, no roles and no PI details. It supplies the candidates of the shared `ShareDialog` and `UserPicker` (`docs/MFF-Core_module-core-api.md`, "Projects" and "People, group and job position pickers"). Extra query parameters:
+- `GET /directory?search=&limit=` — Protected (any logged-in user); with no `limit` every matching user and group is returned, A to Z (core v0.1.216; there is no row cap any more); `limit=N` is honoured only when a caller sends it explicitly. Response: `{ users: [{ id, username, label, first_name, last_name, account_type, inactive }], groups: [{ id, label }] }`. By default active standard accounts and non-archived groups only; no email, no roles and no PI details. It supplies the candidates of the shared `ShareDialog` and `UserPicker` (`docs/MFF-Core_module-core-api.md`, "Projects" and "People, group and job position pickers"). Extra query parameters:
   - `includeNoLogin=1` — also returns active no-login contacts.
   - `type=users` — leave out `groups`.
-  - `ids=1,2` — look those users up by id, whatever their status (a disabled user comes back with `inactive` set); a pending registration is never returned.
-- `GET /directory/groups` — Protected (any logged-in user). Response: `{ groups: [{ id, label }] }` (non-archived groups).
+  - `ids=1,2` — look those users up by id (uncapped), whatever their status (a disabled user comes back with `inactive` set); a pending registration is never returned.
+- `GET /directory/groups` — Protected (any logged-in user). No row cap (core v0.1.216): every non-archived group is returned. Response: `{ groups: [{ id, label }] }` (non-archived groups).
 - `GET /directory/job-positions` — Protected (any logged-in user). Response: `{ jobPositions: [{ id, name }] }`.
 
 ## Search (`/search`)

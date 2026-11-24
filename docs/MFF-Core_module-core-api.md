@@ -411,6 +411,8 @@ For both selects, a stored id that is no longer offered shows "(not available: i
 - `UserPicker`: typing in the search box adds a last row `Use "<text>" (not in the app)`. Choosing it calls `onChange(null, null)` and `onTextChange(text)`, and shows a chip "<text> (not in the app)". Choosing a person calls `onChange(id, user)` and `onTextChange('')`. `text` is the typed name (controlled); with `rememberAs` and no `text` prop it is remembered under `<rememberAs>.text`. Multi mode ignores `allowFreeText`.
 - `GroupPicker` and `JobPositionPicker`: a last option "Other (type a name)" shows a text box (placeholder from the `textPlaceholder` prop). Picking a core value clears the text (`onTextChange('')`); choosing Other after a core value calls `onChange(null, null)`; a given `text` with no id opens on Other.
 
+The pickers and `ShareDialog` have no row cap (core v0.1.216): `UserPicker` and `ShareDialog` send no `limit`, so every matching user and group is offered, A to Z.
+
 The pickers read `GET /directory`, `GET /directory/groups` and `GET /directory/job-positions` (`docs/MFF-Core_api.md`, "Directory").
 
 ### `usePageState`: page state persistence
