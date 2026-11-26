@@ -72,5 +72,5 @@ Access tab, Core page table) with no click needed to see who currently has acces
 
 ## Limits
 
-- The developer "view as role/user" mode in the sidebar does not simulate module or page access.
+- The developer "view as role/user" mode in the sidebar issues a token for the viewed identity, so `GET /api/modules`, the module gate, `requirePage` and role checks answer as for that user or role. It is read-only: a non-`GET` request gets `403`.
 - Changing grants takes effect on the user's next page load or login (the module list is fetched then); the API gate (`moduleAccessGate` / `requirePage`) applies immediately.
