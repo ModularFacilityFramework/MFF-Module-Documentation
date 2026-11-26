@@ -16,9 +16,10 @@ A skill is a short set of written instructions for one kind of task, for example
 - Steps: required. The whole SKILL.md is at most 8,000 characters.
 - Reference files (optional): at most 10, plain text, at most 50,000 characters each. A skill and its files together are at most 250,000 characters. File names use letters, digits, ".", "-" and "_".
 - Module tag (optional): a label such as slurm or bookings, used to filter the list.
+- For: everyone, facility staff, or developers (default everyone).
 
 ## How the AI uses skills
-- Every answer from a model that can use tools (today Qwen3.6 27B) gets the name and description of each skill that is on, in its system prompt. At most 40 skills are listed (by name); each description is cut to 300 characters there.
+- Every answer from a model that can use tools gets the name and description of each skill that is on and meant for the asker's level (a staff skill is offered to staff and developers, a developer skill to developers only). At most 40 skills are listed (by name); each description is cut to 300 characters there.
 - When a question matches a description, the AI calls the tool load_skill(name), gets the steps, and follows them. If the steps say so, it reads a reference file with read_skill_file(skill, file, start).
 - These two tools come with skills. They need no install on the Tools tab, and they work even if no other tool is installed.
 - Models that cannot use tools (Mistral, DeepSeek) never see skills and answer as before.
@@ -29,7 +30,7 @@ A skill is a short set of written instructions for one kind of task, for example
 - Who can see it: anyone with access to the Setup page. Only administrators and developers can create, edit, switch on or off, or delete; everyone else gets a read-only view.
 - What it shows:
   - the list, with search, a module tag filter and On/Off;
-  - "New skill", which opens an editor with a template; tabs for SKILL.md and each reference file, and "+ Reference file";
+  - "New skill", which opens an editor with a template; tabs for SKILL.md and each reference file, "+ Reference file", and a For choice;
   - "Skills loaded in answers": the last 50 loads, with when, person ("First Last (username)"), skill, file (SKILL.md or the reference file), model, and the first 8 characters of the answer id;
   - "History of changes": create, edit, rename, enable, disable, delete; who did it and when.
 - Page state kept per user: the sub-tab, the filter, the open sections, the file open in the editor, and the unsaved draft. Unchanged reference files are not copied into the draft. A draft larger than about 60 KB is kept only while the page is open, and the page says so.
@@ -45,7 +46,7 @@ Skills live in the module's own database:
 ## API (all under `<api>/ai`, page setup; writes need administrator or developer)
 - `GET /setup/skills`: the list, limits, template, recent loads and recent changes.
 - `GET /setup/skills/:id`
-- `POST /setup/skills` `{content, tag, enabled, files:[{name, content}]}`
+- `POST /setup/skills` `{content, tag, audience: 'user'|'staff'|'developer', enabled, files:[{name, content}]}`
 - `PUT /setup/skills/:id` with the same body. It replaces all files of the skill.
 - `POST /setup/skills/:id/enabled` `{enabled}`
 - `DELETE /setup/skills/:id`
