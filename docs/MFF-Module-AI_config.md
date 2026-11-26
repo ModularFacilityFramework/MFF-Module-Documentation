@@ -69,6 +69,23 @@ Setup -> Model (switch permission as before):
 - Data: `ai_tool_use` has one row per tool call (answer_id, user_id, level, tool, target, ok, keyword). `target` is a doc or skill name only, never the question, the arguments or the result.
 - Also new on Setup → Tools and Skills: "What the AI can do" lists each tool and skill with a status: tested (tried with real questions on the AI server), done (built), or planned.
 
+## Slurm tools
+- Tools: `slurm_queue` (your own jobs, with id, name, state, reason, partition, GPUs, CPUs, memory and times, plus anonymous cluster totals; facility staff and developers can ask for every job), `slurm_job` (the state of one job by id: state, reason, exit code, times) and `slurm_cluster` (per partition: node states and free/total GPUs and CPUs; per node, with its state reason, for staff and developers).
+- Each is installed, switched on and given an audience on Setup → Tools.
+- They call the slurm module's read-only routes (slurm 0.1.46 or later): `GET /external/queue?scope=own|all`, `/external/job-state/<id>` and `/external/cluster-state`. The call is `coreApi.callModuleAsUser(<asking user's id>, 'slurm', ...)`, so the ai manifest has `"requires": ["slurm"]`.
+- The slurm module decides what each person may see:
+  - normal users get only their own jobs (by Slurm user name = MFF user name) and anonymous totals;
+  - staff (developer, administrator, facility_manager, facility_staff) may see all jobs and nodes;
+  - another person's job answers "There is no job <id> that you can see", the same as a missing one.
+- The AI never widens this, and answers only from the asker's own result (nothing is cached).
+- Errors the AI explains:
+  - no Slurm access (ask facility staff);
+  - only staff may see every job;
+  - Slurm unavailable;
+  - the Slurm module cannot be reached (for example, slurm older than 0.1.46).
+- The AI is told that partitions share nodes, so figures are never added across partitions, and that "free" does not promise a job will start.
+- Tested against a stand-in built to the slurm module's contract; not yet against the real routes, which need slurm 0.1.46 deployed.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
