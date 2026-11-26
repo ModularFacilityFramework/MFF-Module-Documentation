@@ -28,6 +28,7 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
 - **Model:** what is loaded, switching (waits for running answers, or stops them), history, the instruction and sampling values per model. A switch takes 1 to 2 minutes, during which the AI answers nobody.
 - **Benchmark:** the same questions asked to several models; speed, automatic checks, 1-5 scores with model names hidden, CSV. The model loaded before is loaded again at the end. Chat questions wait meanwhile.
 - **Tools:** install, remove, switch on or off, restrict to roles. Installing downloads nothing. Available: Date and time, Calculator, Unit converter, Read attached file, Edit Excel file, Edit Word file, Make a file. None is installed at first. Only models with the `tools` capability use them.
+- **Skills:** short written instructions the AI loads for one kind of task. Only administrators and developers can change them; others with the Setup page get a read-only view. See `docs/MFF-Module-AI_skills.md`.
 - **Limits:** every quota and limit. Changes apply within a few seconds.
 - **Usage:** figures only, no names and no text.
 - **Configuration:** which keys are set (never their values).
