@@ -19,7 +19,7 @@ A skill is a short set of written instructions for one kind of task, for example
 - For: everyone, facility staff, or developers (default everyone).
 
 ## How the AI uses skills
-- Every answer from a model that can use tools gets the name and description of each skill that is on and meant for the asker's level (a staff skill is offered to staff and developers, a developer skill to developers only). At most 40 skills are listed (by name); each description is cut to 300 characters there.
+- Every answer from a model that can use tools gets, in its system prompt, the name and description of each skill that is on and meant for the asker's level (a staff skill is offered to staff and developers, a developer skill to developers only). At most 40 skills are listed (by name); each description is cut to 300 characters there.
 - When a question matches a description, the AI calls the tool load_skill(name), gets the steps, and follows them. If the steps say so, it reads a reference file with read_skill_file(skill, file, start).
 - These two tools come with skills. They need no install on the Tools tab, and they work even if no other tool is installed.
 - Models that cannot use tools (Mistral, DeepSeek) never see skills and answer as before.
