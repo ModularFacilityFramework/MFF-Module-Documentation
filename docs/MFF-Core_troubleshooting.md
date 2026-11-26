@@ -28,6 +28,10 @@ Problem: Large files fail to upload
 - Cause: File exceeds size limit (50MB)
 - Fix: Reduce file size or increase limit in `fileService.js` (limits.fileSize)
 
+## Modules
+
+- **A red panel or the badge "Update failed - retry needed" on Setup → Preferences → Modules:** the module's last update is unfinished. The panel gives the reason (a failed Install/Update step, installed packages that do not match `package.json` or the lockfile, a production site built before the module's current code, or a backend that has an older commit loaded or could not load the module). Fix the cause if the message names one, then click **Update** or **Update all**: core installs the dependencies again and runs one build and restart, even when there is nothing new to pull. Details: `docs/MFF-Core_module-install-finalize.md`, "Retrying an unfinished update".
+
 ## Database
 
 Problem: Cannot connect to DB
