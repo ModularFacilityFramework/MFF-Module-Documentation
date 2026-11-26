@@ -79,6 +79,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 | [`MFF-Module-AI_user-guide.md`](docs/MFF-Module-AI_user-guide.md) | AI module (`ai`) — user guide |
 | [`MFF-Module-AI_config.md`](docs/MFF-Module-AI_config.md) | AI module — installation and administration |
 | [`MFF-Module-AI_skills.md`](docs/MFF-Module-AI_skills.md) | AI module — skills |
+| [`MFF-Module-AI_safety.md`](docs/MFF-Module-AI_safety.md) | AI module — safety and scope |
 | [`MFF-Module-AlphaPulldown_overview.md`](docs/MFF-Module-AlphaPulldown_overview.md) | AlphaPulldown module (`alphapulldown`) — overview |
 | [`MFF-Module-AlphaPulldown_library.md`](docs/MFF-Module-AlphaPulldown_library.md) | AlphaPulldown module — shared proteome and feature library |
 | [`MFF-Module-AlphaPulldown_target.md`](docs/MFF-Module-AlphaPulldown_target.md) | AlphaPulldown module — Target tab |

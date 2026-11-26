@@ -11,6 +11,7 @@ Add these by hand, then restart the backend. There is no page for them.
 | `MODULE_AI_CTL_SSH_KEY_PATH` | yes | private key that may only run `ai-ctl`, readable by the backend's user only |
 | `MODULE_AI_CTL_SSH_KNOWN_HOSTS` | yes | known_hosts file with the GPU host's key |
 | `MODULE_AI_MODELS` | yes | `keyword=Label\|capabilities;...`, capabilities from `vision`, `thinking`, `thinking-r1`, `tools`. Keywords must match the controller |
+| `MODULE_AI_GUARD_URL` | no | guard model server, e.g. `http://<gpu6>:8002`; without it there is no guard check (`docs/MFF-Module-AI_safety.md`) |
 | `MODULE_AI_VLLM_API_KEY` | no | only if vLLM was started with a key |
 | `MODULE_AI_CTL_SSH_PORT` | no | default 22 |
 | `MODULE_AI_STORAGE_SUBDIR` | no | folder in each person's workspace, default `module-AI` |
@@ -29,6 +30,7 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
 - **Benchmark:** the same questions asked to several models; speed, automatic checks, 1-5 scores with model names hidden, CSV. The model loaded before is loaded again at the end. Chat questions wait meanwhile.
 - **Tools:** install, remove, switch on or off, restrict to roles. Installing downloads nothing. Available: Date and time, Calculator, Unit converter, Read attached file, Edit Excel file, Edit Word file, Make a file. None is installed at first. Only models with the `tools` capability use them.
 - **Skills:** short written instructions the AI loads for one kind of task. Only administrators and developers can change them; others with the Setup page get a read-only view. See `docs/MFF-Module-AI_skills.md`.
+- **Safety:** the safety and scope checks, which roles count as facility staff, extra server names to hide, added delay and the questions and answers stopped. Changes need administrator or developer. See `docs/MFF-Module-AI_safety.md`.
 - **Limits:** every quota and limit. Changes apply within a few seconds.
 - **Usage:** figures only, no names and no text.
 - **Configuration:** which keys are set (never their values).
@@ -64,5 +66,7 @@ Setup -> Model (switch permission as before):
   - `ai_skill_files`: the reference files of each skill.
   - `ai_skill_log`: one row per skill load (answer id, user, skill, file, model keyword; never any question or answer text).
   - `ai_skill_audit`: who created, changed, switched on or off, or deleted which skill.
+  - `ai_skills.audience` (new column): who the skill is for (everyone, facility staff or developers).
+  - `ai_safety_log`: one row per safety check; never any question or answer text.
 - Hourly cleanup (`actsAsUsers` in the manifest): abandoned uploads after a day, deleted chats after the limit "Keep deleted chats". Files of people deleted from MFF are not removed.
 - If the backend is restarted while an answer is being written, that answer is lost; the page offers "Answer it now".

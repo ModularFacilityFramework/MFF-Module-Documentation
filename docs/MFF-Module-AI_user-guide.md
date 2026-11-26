@@ -22,6 +22,9 @@ The AI tab is a chat with the AI model that runs on the facility's own GPU serve
 ## Skills
 Your facility can write skills: short instructions for particular tasks, for example how a buffer recipe should be written here. When your question matches a skill, the AI loads it and follows its steps; the chat shows this as "Used a tool: Load skill". Only the Qwen model uses skills; with another model loaded, the AI answers without them. Skills are written and managed by administrators and developers on Setup -> Skills.
 
+## Safety
+The AI only helps with MFF, the facility and its servers, structural biology and scientific writing, and politely says so for anything else. A safety check reads questions and answers and stops harmful ones. If you are struggling, the AI will point you to help: Samaritans are free on 116 123, day and night.
+
 ## Good to know
 - The AI can make mistakes: check important answers.
 - One answer at a time per person, and 30 questions per 10 minutes (defaults). When many people ask at once, questions wait in a queue and the page shows your place.
