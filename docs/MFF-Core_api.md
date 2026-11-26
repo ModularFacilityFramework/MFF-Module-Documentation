@@ -275,6 +275,17 @@ Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 
 - `POST /modules-management/:id/install` — installs a module. Body: `{ repo }` (optional) installs that repo. Without `repo`, an id declared by exactly one repo installs as before; an id declared by several repos answers `409` listing the repos; a `repo` that does not declare the id answers `404`.
 - `GET /modules-management/job` — the latest job, with `modules: [{ id, label, from, to, behind, status, step, message }]` (`status` is `pending`, `running`, `done` or `failed`) and `failedModules`.
 
+## Projects (`/projects`)
+
+Core v0.1.218. Served from the projects provider registered by the module that owns projects (`docs/MFF-Core_module-core-api.md`, "Projects"). All routes need a login (`401`), **not** access to that module; project membership, decided by the provider, is the control.
+
+- `GET /projects/provider` — `{ available, module_id, can_create }`.
+- `GET /projects?scope=mine|shared|all&search=&archived=1` — `Project[]`. Archived projects are left out unless `archived=1`. `scope=all` is for administrators and developers only, else `403`; any other scope is `400`; no provider is `404`.
+- `GET /projects/:id` — `Project`; `404` if absent or not readable.
+- `POST /projects` — body `{ title, description }`, `201` with the `Project`. `400` with no title, `403` if the user cannot create, `404` with no provider; read-only view-as sessions get `403`.
+
+A provider failure answers `500` "The projects request failed".
+
 ## Reports (`/reports`)
 
 - `GET /reports/users-summary` — Protected, `administrator` only — counts by status and by role

@@ -23,6 +23,8 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     callModuleAsUser,                     // (userId, targetModuleId, method, path, opts) => Promise<{ok, status, data, error, ...}> - background identity, see below
     getUserWorkspacePathForUserId,        // (userId) => Promise<{active, path, reason}> - background identity, see below
     registerUpgradeHandler,               // (path, handler, { page?, identify? }) - WebSocket upgrade, see "WebSocket: `registerUpgradeHandler`"
+    registerProjectsProvider,             // (provider) => void - owner module only, see "Projects"
+    projects: { available, access, get, list },  // project membership checks, every module - see "Projects"
     getModuleConfig,                      // () => Record<string, string> - see below
     toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
     apiBasePath,                          // e.g. "/mff-api" - the prefix your own routes are mounted under
@@ -259,7 +261,7 @@ You get core's raw connection pool because some things (like the two functions a
     useRoles,                                  // (userData) => { roles: string[], hasRole, hasAnyRole, hasAllRoles, canManageUsers } - see "The current user's roles"
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
     usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
-    registerProjectsProvider,                  // (provider) => void - only the module that owns projects (Science) registers; see "Projects"
+    registerProjectsProvider,                  // (provider) => void - owner module only (Science); fallback when the server has no provider, see "Projects"
     ui: { ProjectPicker, ShareDialog, UserPicker, GroupPicker, JobPositionPicker },  // shared components - see "Projects" and "People, group and job position pickers"
     getAllRoles,                               // () => Promise<string[]>
     getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
@@ -373,19 +375,37 @@ Thin, full pass-through to `GET /users` — same admin-only role gate, same pagi
 
 Core v0.1.211. One module owns projects (Science); the others never import it.
 
-**`coreApi.registerProjectsProvider(provider)`.** Only the owner module registers. The provider is:
-- `list({ scope: 'mine' | 'shared' | 'all', search, includeArchived })` returning `Project[]`
-- `get(id)` returning a `Project` or `null`
-- `create({ title, description })`, optional; without it the "+ New project" button is hidden
+**Why (core v0.1.218).** The picker runs in the browser. A provider that calls the owner module's routes gets `404` for any user without access to that module (a module with no grants is developer/administrator only). So the owner registers a **server** provider, and core serves it to every signed-in user, outside the module access gate. Project membership, decided by the provider, is the control. Routes: `docs/MFF-Core_api.md`, "Projects".
 
 A `Project` is `{ id, number, title, owner_label, access, can_write, can_manage, archived, item_count, updated_at }`.
 
-**`<coreApi.ui.ProjectPicker mode="single"|"multi" rememberAs="module.page.what" value onChange(idOrIds, projectOrProjects) requireWrite includeArchived />`.** One look in every module:
+**Backend, owner module only: `coreApi.registerProjectsProvider(provider)`.**
+- `list(user, { scope: 'mine' | 'shared' | 'all', search, includeArchived })` returns `Project[]` — only what this user may read.
+- `get(user, id)` returns a `Project`, or `null` when it is absent **or** not readable (a thrown error with status 403 or 404 counts as `null`).
+- `create(user, { title, description })`, optional; returns the new `Project` (flat). A `create()` error with a 4xx status keeps its message.
+- `canCreate(user)`, optional; returns a boolean (default `true` when `create` exists).
+- `user` is `{ id, username, email, group_id, roles: [names] }`.
+
+Only one module may register: a second one's `register()` throws and that module is skipped. A skipped module's provider is removed. Core passes on only `id`, `number`, `title`, `owner_label`, `access` (`'read'`, `'write'`, `'owner'` or `'admin'`), `can_write`, `can_manage`, `archived`, `item_count` and `updated_at`. `can_write`, `can_manage` and `archived` must be `true` or `1`. Entries without an `id`, with `access` `'none'` or with `can_read` false are dropped, and a `get()` that answers another id counts as `null`.
+
+**Backend, every module: `coreApi.projects`.** This is the membership check to use (for example by the `ai` module). No manifest `requires` is needed for these. In a request pass `req.user`; pass only a user the module is really acting for.
+- `available()` returns a boolean.
+- `access(userOrUserId, projectId)` returns `{ ok, project_id, access: 'none' | 'read' | 'write' | 'owner' | 'admin', can_read, can_write, can_manage, project | null, error }`. It never throws; with no provider, an unknown user or a provider failure it returns `ok: false` with everything false.
+- `get(userOrUserId, id)` returns a `Project` or `null`.
+- `list(userOrUserId, options)` returns `Project[]`.
+- `get` and `list` return `null` / `[]` on any failure.
+
+**Frontend: `coreApi.registerProjectsProvider(provider)`.** Now only the **fallback**, used when the server has no provider. The provider is:
+- `list({ scope: 'mine' | 'shared' | 'all', search, includeArchived })` returning `Project[]`
+- `get(id)`, which must resolve to a flat `Project` or `null`
+- `create({ title, description })`, optional, which must resolve to the new flat `Project`; without it the "+ New project" button is hidden
+
+**`<coreApi.ui.ProjectPicker mode="single"|"multi" rememberAs="module.page.what" value onChange(idOrIds, projectOrProjects) requireWrite includeArchived />`.** One look in every module. It uses core's `/api/projects` when a server provider is available (the create button then follows `can_create`).
 - a search box; the tabs "My projects", "Shared with me" and "All" ("All" only for administrators and developers);
 - the most recently used first (remembered per user across modules); the chosen projects as chips; "+ New project"; rows that show the number, title, owner and a read/write badge;
 - with `requireWrite`, read-only projects are greyed out with the reason;
-- `rememberAs` is a page-state key: the selection, the tab and the search survive leave, return and reload. A remembered project that is gone, archived or no longer writable is dropped quietly and reported through `onChange` (`null` or `[]`). On the first render with a remembered selection, `onChange` is called once with `(id, null)` or `(ids, null)`;
-- with no provider registered it shows "Projects are not available here".
+- `rememberAs` is a page-state key: the selection, the tab and the search survive leave, return and reload. A remembered selection is dropped, quietly and reported through `onChange` (`null` or `[]`), only when the project is gone or unreadable (`null`, `404`, `403`), archived or no longer writable; a failed request keeps it. On the first render with a remembered selection, `onChange` is called once with `(id, null)` or `(ids, null)`;
+- with no provider it shows "Projects are not available here (the module that provides them is not installed)".
 
 **`<coreApi.ui.ShareDialog title levels=[{ value, label }] loadGrants() onGrant({ type, id, level }) onRevoke({ type, id }) onClose />`.** Generic: the owner module supplies what a grant is. `loadGrants()` returns `[{ type: 'user' | 'group', id, label, level }]`. Candidates come from `GET /directory` (`docs/MFF-Core_api.md`).
 
