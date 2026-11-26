@@ -33,6 +33,30 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
 - **Usage:** figures only, no names and no text.
 - **Configuration:** which keys are set (never their values).
 
+## Qwen precision and context
+Qwen3.6-27B can run in three modes. Each mode is its own keyword in the vLLM controller on gpu6, and all of them are served under the model name "qwen", so the chat sees the same model with the same capabilities. All three fit the full 262,144 tokens the model was trained for.
+
+| Mode | Controller keyword | Weights | KV cache | Context | KV cache size | Full-length requests at once | Decode, 1 request | Reading a long prompt |
+|---|---|---|---|---|---|---|---|---|
+| bf16 (default) | `qwen` | bf16, `/home/ai/models/llm/Qwen3.6-27B`, 51.1 GiB | bf16 | 262,144 | 504,123 tokens | 1.92 | 26.6 tokens/s | 3,171 tokens/s |
+| bf16 + FP8 KV | `qwen-fp8kv` | bf16 (same folder) | FP8 | 262,144 | 994,920 tokens | 3.80 | 26.8 tokens/s | 1,462 tokens/s |
+| FP8 + FP8 KV | `qwen-fp8` | FP8, Qwen's official Qwen/Qwen3.6-27B-FP8 (revision a56219b8, 30.89 GB) in `/home/ai/models/llm/Qwen3.6-27B-FP8`, 28.5 GiB on the GPU | FP8 | 262,144 | 1,715,433 tokens | 6.54 | 46.7 tokens/s | 1,501 tokens/s |
+
+- Measured on 26/11/2026 on gpu6 GPU 3 (RTX PRO 6000 Blackwell, 96 GB), vLLM 0.26.0, `--gpu-memory-utilization 0.9`. In every mode, a 260,530-token prompt with a fact hidden near the start was answered correctly.
+- Going past 262,144 tokens would need YaRN rope scaling, which is not used.
+- The two FP8 KV modes use `--attention-backend TRITON_ATTN`. FlashInfer cannot build its FP8-KV kernels in the gpu6 vLLM environment (nvcc 13.3 against CUDA 13.0 headers). That is also why a long prompt is read about half as fast in those modes.
+- The first start of a mode at a new context length compiles for about 10 minutes. After that the compile cache is used, and a switch takes about 2 to 3 minutes.
+- Before 26/11/2026 every model was served with `--max-model-len 32768`. Mistral and DeepSeek still are.
+- The controller's table (keyword, model folder, `--max-model-len`, flags) lives in `/home/ai/vllm_controller.cpp`. A copy is kept in the module repo at `tools/gpu6/vllm_controller.cpp`. Changing it means rebuilding the controller (`g++ -std=c++17 -O2 -pthread`) and restarting `vllm-controller.service`, which reloads the default model.
+- `ai-ctl info` now also returns `controller_context` (keyword -> `--max-model-len`) and each model folder's `quant_method`.
+
+Setup -> Model (switch permission as before):
+- Switching: the model choice lists Qwen once per mode ("Qwen3.6 27B: FP8 weights, FP8 KV cache, up to 262,144 tokens"), next to Mistral and DeepSeek. A mode is offered only when the controller knows its keyword.
+- What is loaded: the header shows the loaded mode. The "Loaded model" table has a Precision row (for example "FP8 weights, FP8 KV cache"), read from the running `vllm serve` arguments and the model folder's config.
+- History: the switch history names the mode of both sides of each switch.
+- API: `POST <api>/ai/setup/switch` `{keyword:'qwen', variant:'qwen-fp8'|'qwen-fp8kv'|'qwen' (optional), mode}`. A variant that belongs to another model, or that the server does not offer, gives `400`.
+- Page state: the chosen target persists per user (`ai.setup.switchTarget`).
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.

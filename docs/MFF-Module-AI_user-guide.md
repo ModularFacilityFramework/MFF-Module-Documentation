@@ -9,6 +9,7 @@ The AI tab is a chat with the AI model that runs on the facility's own GPU serve
 ## Chatting
 - **Enter** sends, **Shift+Enter** makes a new line. **Stop** ends an answer; what was written so far is kept.
 - **Think first** (Qwen): slower, better for hard questions. The thinking is shown separately; click it to read it.
+- Qwen accepts conversations of up to 262,144 tokens (about 196,000 words). Administrators can load Qwen in a smaller FP8 form; it answers almost twice as fast, and more long conversations fit at the same time.
 - You can leave or reload while an answer is being written: it goes on, and the page picks it up again.
 - **Answer again** replaces the last answer. **Edit** changes your last question and asks again.
 - Chats are listed by date, with search in titles and text. **…** next to a chat renames or deletes it. Deleted chats can be restored from "Deleted" until they are removed for good (30 days unless changed on Setup).
