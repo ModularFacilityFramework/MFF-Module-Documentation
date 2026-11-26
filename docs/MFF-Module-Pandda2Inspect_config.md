@@ -48,14 +48,17 @@ already-known API base and id.
 ## Restricting the setup tab
 
 `module.manifest.json` declares one page, `setup` (the "pandda2.inspect
-setup" tab), so an admin can restrict it at Setup → Preferences → 🔐 Access
-→ Pandda2-inspect → Pages. Its routes (`/branches`, `/deploy`,
-`/deploy/status`, `/decisions/download`) check `coreApi.requirePage('setup')`
-on top of their developer/administrator role check, so a grant can only
-narrow access among staff, never open it to anyone else. Nothing granted
-means open to all staff, as before. `frontend/index.js` registers the tab
-with `pageKey: 'setup'`, so core hides it entirely from anyone the grant
-leaves out (needs core v0.1.144+).
+setup" tab), without `openByDefault`. With nothing granted, only
+developers and administrators (plus `SUPERUSER_ROLE`, if set) can use it,
+and they keep access whatever is granted, so a grant cannot lock any of
+them out (see `MFF-Core_module-access.md`). Its routes (`/branches`,
+`/deploy`, `/deploy/status`, `/decisions/download`) check
+`coreApi.requirePage('setup')` and also require the developer or
+administrator role. Granting the page to anyone else at Setup →
+Preferences → 🔐 Access → Pandda2-inspect → Pages therefore does not let
+them use those routes: the role check still refuses them. `frontend/index.js`
+registers the tab with `pageKey: 'setup'`, so core hides it from anyone
+without access to the page (needs core v0.1.144+).
 
 ## `GET /config`
 
