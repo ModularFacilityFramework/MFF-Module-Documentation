@@ -36,5 +36,9 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
+  - `ai_skills`: skills (the whole SKILL.md, name, description, module tag, on/off).
+  - `ai_skill_files`: the reference files of each skill.
+  - `ai_skill_log`: one row per skill load (answer id, user, skill, file, model keyword; never any question or answer text).
+  - `ai_skill_audit`: who created, changed, switched on or off, or deleted which skill.
 - Hourly cleanup (`actsAsUsers` in the manifest): abandoned uploads after a day, deleted chats after the limit "Keep deleted chats". Files of people deleted from MFF are not removed.
 - If the backend is restarted while an answer is being written, that answer is lost; the page offers "Answer it now".
