@@ -253,6 +253,14 @@ A saved value for something that no longer exists falls back quietly. Cancel and
 
 **Where it is stored:** by mff-core's shared helper `coreApi.usePageState` (core 0.1.205 or newer: per user, in the browser and on the server; it survives a reload and a logout), with keys of the form `slurm.<page.what>` (`docs/MFF-Core_module-core-api.md`, "`usePageState`"). On an older core without the helper, slurm falls back to the browser's `localStorage` (per user; it survives a reload only). Everything goes through `frontend/components/usePageState.js`. The Config tab's unsaved edits are one saved object for both files; an edit over 60 KB is not saved (core's limit is 64 KB per key).
 
+## Access to server information routes
+
+Since module version 0.1.47, `GET /nodes`, `/partitions`, `/stats`, `/stats/history` and `/stats/usage` (the module's own UI routes) answer only to:
+- a user with the role `developer`, `administrator`, `facility_manager` or `facility_staff`; or
+- a user who may use the slurm module themselves (their own grant, or core's superuser role), asked on every request with `coreApi.getModulesForUser`.
+
+This also applies to delegated and background calls from a module that lists `slurm` in `requires`: core's module gate lets those through for a user with no slurm grant, so slurm checks again itself. Anyone else gets `403 { error: "Not allowed", reason: "no_slurm_module_access", message }`. If the access check itself fails: `503 { error: "Access check failed", message }`. On a core without `getModulesForUser` (before 0.1.211), direct requests rely on core's module gate and calls made through another module are refused for non-staff. These routes are not an API for other modules; modules use `/external/*`. People using the slurm module's own pages are not affected.
+
 ## External API for other modules
 
 Other modules (e.g. ABCFold) reach this module's Slurm capabilities via
