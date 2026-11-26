@@ -26,6 +26,7 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     registerProjectsProvider,             // (provider) => void - owner module only, see "Projects"
     projects: { available, access, get, list },  // project membership checks, every module - see "Projects"
     getModuleConfig,                      // () => Record<string, string> - see below
+    docs,                                 // { available, list, read } - read-only shared documentation, see "Documentation"
     toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
     apiBasePath,                          // e.g. "/mff-api" - the prefix your own routes are mounted under
     config: {
@@ -246,6 +247,15 @@ Behavior worth knowing:
 - **Only your own namespace, never raw `process.env`.** You get back exactly the `MODULE_<YOUR_ID>_*` keys that exist, prefix stripped, as a plain object — never core's own secrets (JWT keys, `DB_PASSWORD`, another module's values), matching the same "deliberately curated subset" principle every other `coreApi` entry follows.
 - **Returns `{}` if nothing is set**, never `null`/`undefined`/an exception — check for the specific keys you need (`cfg.APP_URL === undefined` means unset), same "never throws" convention as `callModule`/`getUserWorkspacePath`.
 - **Read at the moment you call it, not cached at module load** — but since it reads `process.env`, which is only populated once at process startup (`dotenv.config()`), a value added to `App_backend/.env` still needs a backend restart before a call to `getModuleConfig()` sees it. This removes the "wrong file" class of error, not the "needs a restart" one.
+
+### Documentation: `coreApi.docs`
+
+Read-only access to these shared docs for a module that needs their text (core v0.1.219). All three are async and never throw.
+- `available()` returns a boolean: is there a docs folder here.
+- `list()` returns `[{ name, size, modified }]` sorted by name; `size` is in bytes, `modified` an ISO 8601 string. `[]` when not available.
+- `read(name)` returns `{ name, size, modified, text }` (UTF-8), or `null` (the name is not in the list, or the docs are not available). `name` is a plain file name from `list()`, never a path.
+
+Only regular `*.md` files up to 2 MB directly in the folder are offered: no sub-folders, no symlinks, no names starting with a dot. The folder is the core repo's `docs` link (`../MFF-docs/docs`), so it exists only where MFF-docs is checked out beside the deployment. Core neither fetches nor updates that checkout, so the text is only as new as the checkout. Core applies **no access rule**: the docs include installation and administration material, so the module decides who may read what. On an older core, check that `coreApi.docs` exists.
 
 ### `pool` caveat
 

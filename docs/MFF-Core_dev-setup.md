@@ -32,6 +32,10 @@ Flags: `--dry-run`, `--yes`, `--answers FILE` (a template is in `scripts/install
 
 The manual steps below remain as the fallback.
 
+## Shared documentation (`coreApi.docs`)
+
+A deployment needs an MFF-docs checkout beside the core checkout (so that core's `docs` link, `../MFF-docs/docs`, resolves) for `coreApi.docs` to work (core v0.1.219). This includes production. Core neither fetches nor updates that checkout. See `docs/MFF-Core_module-core-api.md`, "Documentation".
+
 ## First-time setup
 1. Clone the repository and enter the project root.
 2. Run the automated bootstrap:
