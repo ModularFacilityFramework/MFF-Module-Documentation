@@ -59,6 +59,15 @@ Setup -> Model (switch permission as before):
 - API: `POST <api>/ai/setup/switch` `{keyword:'qwen', variant:'qwen-fp8'|'qwen-fp8kv'|'qwen' (optional), mode}`. A variant that belongs to another model, or that the server does not offer, gives `400`.
 - Page state: the chosen target persists per user (`ai.setup.switchTarget`).
 
+## MFF docs tools
+- Tools: `docs_index` (list of docs with title, area and summary, with an optional filter), `search_docs` (best matching sections, with extracts) and `read_doc` (one section by heading, or the whole doc in 8,000-character parts).
+- They are installed, switched on and given an audience on Setup → Tools like any tool. The AI is told to look in the docs first for questions about MFF, a module, procedures or servers, and to name the doc it used.
+- Where the docs come from: `coreApi.docs.list()` and `coreApi.docs.read(name)` when core offers them; otherwise the folder in `MODULE_AI_DOCS_DIR` (optional config key). Only top-level `*.md` files are read, and the list is cached for 60 s.
+- Who may read which doc: `docs/INDEX.json`, `{ "files": { "<name>.md": { "audience": "user"|"staff"|"developer", "summary": "..." } } }`. Without an entry, `*_user-guide.md` files are for everyone and every other doc is for developers only. The check is made in the backend for the asker; a doc above the asker's level is never listed, searched or read.
+- Setup → Tools: "MFF docs the AI can read" lists each doc with its area, audience and summary. "Tools used in answers" lists the last 50 tool uses.
+- Data: `ai_tool_use` has one row per tool call (answer_id, user_id, level, tool, target, ok, keyword). `target` is a doc or skill name only, never the question, the arguments or the result.
+- Also new on Setup → Tools and Skills: "What the AI can do" lists each tool and skill with a status: tested (tried with real questions on the AI server), done (built), or planned.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
