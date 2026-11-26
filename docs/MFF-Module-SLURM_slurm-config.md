@@ -277,6 +277,7 @@ rather than assume a thrown exception ever happens on their end.
 ### Access gate
 
 Every route below requires (in order):
+Exceptions: `GET /gpu-capacity`, and the three read-only views `/queue`, `/job-state/:jobId` and `/cluster-state`, have their own rules, given in their sections.
 
 1. A valid mff-core session (`coreApi.authenticateToken` - the usual
    bearer-token check).
@@ -308,6 +309,23 @@ Added in module version 0.1.40. Used by the finance module for its "GPUs allocat
   - `availableGpus` is the same sum excluding nodes that are DOWN, DRAIN, UNK or NOT_RESPONDING.
 - A Slurm failure answers `502 { success: false, message }`.
 - **Module access (since version 0.1.41):** the route is listed in slurm's manifest `publicRoutes` (`{ GET, /external/gpu-capacity }`, the only public route in the manifest; see `docs/MFF-Core_module-manifest.md`), so core's module-level access gate does not apply: a user needs **no** grant on the slurm module. Core lets the request through untouched, so the handler authenticates itself: a valid bearer token (`401` otherwise) and one of the roles above (`403` otherwise). It is never anonymous. This is how finance reads it with `callModule(userToken, 'slurm', 'GET', '/external/gpu-capacity')`, although it cannot list slurm in `requires` (slurm requires finance, which would be circular).
+
+### Read-only views: `GET /queue`, `GET /job-state/:jobId`, `GET /cluster-state`
+
+Added in module version 0.1.46, for the local AI's tools; any module that lists `slurm` in `requires` may use them. All are GET only and change nothing.
+
+**Who may call.** Staff (`developer`, `administrator`, `facility_manager`, `facility_staff`) need no Slurm account. Anyone else must be a Slurm user with an association (the MFF user name is the Slurm user name, compared case-insensitively).
+
+**What a normal user never gets:** another person's job, any host name except the node(s) of their own RUNNING job, a node's state reason, or the AI card (`gpus` counts only `gres/gpu`, never `gres/aicard`). A pending reason is cut to its leading code word (for example `ReqNodeNotAvail`), because the full text can name nodes. **Nobody** gets working directories, scripts, command lines, environment, addresses, configuration, logs or limits. Partition names are shown to everyone, as configured in Slurm.
+
+**`GET /queue[?scope=own|all]`** (default `own`: the caller's own jobs, whether sent by `sbatch` or this API; `all` is staff only).
+Response: `{ scope, totals: { running, pending }, jobs: [...], generatedAt }`. `totals` count the whole cluster and name nobody. Each job: `jobId`, `arrayJobId`, `arrayTaskId` (both null unless an array job), `arrayTasks` (the waiting task range of a pending array, such as "1-5", else null), `name`, `state`, `reason`, `partition`, `gpus`, `cpus`, `memMb`, `submittedAt`, `startedAt` (epoch seconds; null while pending), `timeLimitMin` (null = no limit), `nodes` (Slurm node list string or null; a normal user sees it only for their own running job). With `scope=all`, staff also get `user` and `account` on each job, `nodes` for every job, and the full pending reason text. The queue is what `squeue` shows: jobs that finished some minutes ago are gone (use `/job-state`).
+
+**`GET /job-state/:jobId`** (`123`, or `123_4` for one array task). From `sacct`, so command-line and finished jobs are included. Response: `{ jobId, state, reason, exitCode, submittedAt, startedAt, endedAt }`; `exitCode` is null until the job has finished; times are epoch seconds or null. Staff may ask for any job. A normal user may ask only for their own: another user's job and a job that does not exist give the same `404 { "error": "Unknown job", "message": "There is no job <id> that you can see." }`. A bare array id returns the task whose own job id is that number; use `123_4` for a given task. (This is separate from `GET /jobs/:jobId`, which covers only jobs submitted through this API.)
+
+**`GET /cluster-state`**. Response: `{ partitions: [ { name, state, nodesUp, nodesDown, gpusTotal, gpusFree, cpusTotal, cpusFree } ], generatedAt }`. "Up" means not DOWN, DRAIN, UNK or NOT_RESPONDING; free figures count up nodes only, and are not a promise that a job will start (memory and limits also apply). Partitions can share nodes, so do not add figures across partitions. Staff also get `nodes: [ { name, state, stateReason, partitions, gpusTotal, gpusUsed, cpusTotal, cpusUsed } ]`.
+
+**Errors (all three):** `403 { error: "No Slurm access", reason: "not_slurm_user" | "no_association", username, message }`; `403 { error: "Not allowed", reason: "staff_only", message }` (`/queue?scope=all` by a non-staff user); `400 { error }` (bad `scope` or job id); `404` as above (`/job-state`); `502 { error: "Slurm unavailable", message }` with a fixed message (the detail goes to the backend log only).
 
 ### `GET /resource-profile?gpuCount=N`
 
