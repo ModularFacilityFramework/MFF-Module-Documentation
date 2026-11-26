@@ -111,7 +111,7 @@ Normalized many-to-many between users and roles — `role_id` is a foreign key, 
 - subject_id BIGINT NOT NULL (setup_users.id or setup_groups.id depending on subject_type)
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 - PRIMARY KEY (module_id, subject_type, subject_id)
-- A module with no grants (here or in setup_module_access_roles) is open to everyone. See MFF-Core_module-access.md.
+- A module with no grants (here or in setup_module_access_roles) is for developers and administrators only (plus the SUPERUSER_ROLE, if set). See MFF-Core_module-access.md.
 
 ### setup_module_access_roles
 - module_id VARCHAR(64) NOT NULL (module manifest id; not a FK)

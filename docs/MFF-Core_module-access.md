@@ -6,7 +6,7 @@ The exact same model also applies *inside* a module, to one of its own declared 
 
 ## Rules
 
-- **Nothing granted = open to everyone.** A module with no grants shows to all users. This is the state after install, and after upgrading core, so nobody is locked out.
+- **Nothing granted = developers and administrators only** (plus the `SUPERUSER_ROLE`, if set). An installed module starts closed; an admin opens it to roles, groups or users. A declared page with no grants is closed the same way, unless its manifest says `"openByDefault": true`, which opens it to everyone who has access to the module.
 - **Once anything is granted, only those are allowed:** the granted users, every user whose group (`setup_users.group_id`) is granted, every user holding a granted role, and **developers/administrators always** (plus the `SUPERUSER_ROLE`, if set). An admin cannot lock themselves out.
 - A user belongs to exactly one group today, so "group access" means users whose group is granted.
 - Any one match is enough (role OR group OR user). Page/tab access for *core* pages by role is still Setup → Preferences → 🔐 Access → Core - same `developer`/`administrator`/`SUPERUSER_ROLE` always-allowed rule as above (fixed to match: it used to only bypass for `developer`).
@@ -27,7 +27,7 @@ Existing deployments: after pulling this change, run **Setup → Preferences →
 
 Both come from `App_backend/src/core/services/moduleAccessService.js`:
 
-1. **The module's API** — `moduleLoader.js` mounts an access gate in front of every module's router. An unrestricted module passes straight through, but **every module request needs a login, except the routes the module lists in `publicRoutes` in its manifest** (`docs/MFF-Core_module-manifest.md`). A restricted module answers `404` to anyone not granted.
+1. **The module's API** — `moduleLoader.js` mounts an access gate in front of every module's router. **Every module request needs a login, except the routes the module lists in `publicRoutes` in its manifest** (`docs/MFF-Core_module-manifest.md`). A module answers `404` to anyone who may not use it (see "Rules").
 2. **The UI** — `GET /api/modules` is filtered per caller (it accepts an optional token and never answers 401; logged out, it returns the full list as before). The frontend builds the sidebar, Dashboard tabs and routes from that one list, so a hidden module vanishes everywhere. The list is re-fetched on login/logout.
 
 **WebSocket upgrades** (a module with `"websocket": true` and a handler registered with `coreApi.registerUpgradeHandler`) go through the same checks before the module's handler runs: a login (`Authorization: Bearer` or `?token=`), the module access check (`404` if the user has no access, the same as the HTTP gate), and the page check if the handler was registered with `{ page }`. A developer's "view as" identity is refused (`403`). See `docs/MFF-Core_module-core-api.md`, "WebSocket".
@@ -40,14 +40,14 @@ Nothing, for whole-module access. The access check happens in core, before the m
 
 ## Page access within a module
 
-The same open-by-default/grant-restricts model, scoped to one page of one module, for a module that wants core's admin to manage *which of its own pages* a user gets, instead of rolling its own role table for that.
+The same grant model, scoped to one page of one module, for a module that wants core's admin to manage *which of its own pages* a user gets, instead of rolling its own role table for that.
 
-1. **Declare** your pages in `module.manifest.json`'s `"pages": [{ "key": "run", "label": "Run" }, ...]` (`docs/MFF-Core_module-manifest.md`). Purely a declaration — nothing is restricted just by declaring it.
+1. **Declare** your pages in `module.manifest.json`'s `"pages": [{ "key": "run", "label": "Run" }, ...]` (`docs/MFF-Core_module-manifest.md`). The declaration alone creates no routes or UI; who may use a declared page with no grants is described below.
 2. **Hide the tab/page itself** (frontend): pass `pageKey` to `registerDashboardTab`/`registerMenuPage` (`App_frontend/src/core/moduleSlots.js`) — core then hides that tab, its sidebar entry, and its route entirely from anyone not granted the page, the exact same way an inactive whole module has no tab/route for anyone (see `docs/MFF-Core_module-ui-guide.md`). Do this instead of registering the tab unconditionally and rendering a "no access" message inside it with `coreApi.useModuleAccess` — that still leaks the tab's existence to someone who shouldn't see it, the same mistake whole-module access already warns against above. `coreApi.useModuleAccess(moduleId)` → `{ loading, visible, pages }` still exists for finer-grained checks *within* a page you're already showing (e.g. hiding one button) — `pages` is `null` (nothing restricted) or the array of allowed keys — but it's not a substitute for `pageKey` when the whole tab/page should disappear. See `docs/MFF-Core_module-core-api.md`.
 3. **Enforce** (backend): `coreApi.requirePage(pageKey)` on your own route, mounted after `authenticateToken` (it does not authenticate on its own — see `docs/MFF-Core_module-core-api.md`) — already bound to your own module's id, so you can't gate a page in a module that isn't yours. Takes an array for a route genuinely shared by more than one of your pages (any one granted page is enough). Answers `403` (not `404` — unlike the module-level gate, the caller is already past it and knows the route exists).
 4. **Admin UI**: Setup → Preferences → 🔐 Access, one tab per **installed** module (plus one for Core's own pages) — only an installed module gets a tab, and only its declared pages appear in it.
 
-A page with no grants yet defaults to developer/administrator (and `SUPERUSER_ROLE`, if set) only — unlike whole-module access, a declared page starts locked down, not open. Granting roles/groups/users to it opens it up to exactly those, same editor as whole-module access; it never widens access beyond the whole-module check either way (a user still needs the module itself first).
+A page with no grants yet is for developer/administrator (and `SUPERUSER_ROLE`, if set) only, the same as a module with no grants — unless the page's manifest entry says `"openByDefault": true`, which opens it to everyone who has access to the module. Granting roles/groups/users to it opens it up to exactly those, same editor as whole-module access; it never widens access beyond the whole-module check either way (a user still needs the module itself first).
 
 ## Admin API (developer/administrator only)
 
@@ -55,7 +55,7 @@ A page with no grants yet defaults to developer/administrator (and `SUPERUSER_RO
 |---|---|
 | `GET /api/modules-management/access-summary` | `{ <moduleId>: { users, groups, roles } }` (granted name lists, not counts) for every module with grants, plus `lockedRoles` |
 | `GET /api/modules-management/:id/access` | Currently granted `users` / `groups` / `roles` for a module, plus `allRoles` (every role) and `lockedRoles` |
-| `PUT /api/modules-management/:id/access` | Body `{ userIds, groupIds, roleIds }`; replaces the module's grants (all empty = open to everyone) |
+| `PUT /api/modules-management/:id/access` | Body `{ userIds, groupIds, roleIds }`; replaces the module's grants (all empty = developers and administrators only) |
 | `GET /api/modules-management/:id/pages` | That module's own declared pages, plus a per-page grant summary (name lists) and `lockedRoles` |
 | `GET /api/modules-management/:id/pages/:pageKey/access` | Currently granted `users` / `groups` / `roles` for one page, plus `allRoles` and `lockedRoles` |
 | `PUT /api/modules-management/:id/pages/:pageKey/access` | Body `{ userIds, groupIds, roleIds }`; replaces that page's grants |
