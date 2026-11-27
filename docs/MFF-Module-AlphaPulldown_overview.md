@@ -1,6 +1,6 @@
 # MFF-Module-AlphaPulldown: overview
 
-Module `alphapulldown` (mount `/alphapulldown`, table prefix `alphapulldown_`). `requires: ["slurm", "abcfold"]`. It runs bait-vs-candidates protein screens: feature building (AlphaPulldown) on CPU through the Slurm module, structure prediction on GPU through the ABCFold module. Cite AlphaPulldown2: Molodenskiy et al. 2025, Bioinformatics, doi:10.1093/bioinformatics/btaf115.
+Module `alphapulldown` (mount `/alphapulldown`, table prefix `alphapulldown_`). `requires: ["slurm", "abcfold", "science"]`. It runs bait-vs-candidates protein screens: feature building (AlphaPulldown) on CPU through the Slurm module, structure prediction on GPU through the ABCFold module. Cite AlphaPulldown2: Molodenskiy et al. 2025, Bioinformatics, doi:10.1093/bioinformatics/btaf115.
 
 ## Tabs
 Tab list: Target, Baits, AlphaPulldown, Modelling (ABCFold), Summary, Library, Setup; staff also get Speed statistics and Page Access. Only Target works so far. Baits opens once the selected target is confirmed. AlphaPulldown, Modelling (ABCFold) and Summary are shown but locked ("not built yet").
@@ -15,6 +15,14 @@ The old Sequences, MSA (CPU) and Co-folding (GPU) tabs were removed from the UI;
 - Sequences: UniProt search, FASTA paste/upload, picking proteins from a proteome in the shared library, bait/candidate selection, generated baits.txt / candidates.txt.
 - Features (CPU): AlphaPulldown `create_individual_features.py --data_pipeline=alphafold3 --compress_features=True` per protein, against the cluster's genetic databases. One Slurm job per run, proteins searched in parallel with xargs -P inside it. The installed AlphaPulldown 2.9 builds features with AlphaFold 3's data pipeline, which searches local databases only (no MMseqs2 mode); pdb_seqres sits in a subfolder, so its path is passed explicitly (Setup: pdb_seqres_path).
 - Co-folding (GPU): one ABCFold job per bait-candidate pair, created with the caller's own token through the ABCFold module. Unchanged by the library work.
+
+## Projects
+The module has no projects of its own. Targets, baits and runs belong to a Science project. Manifest: `requires` `["slurm", "abcfold", "science"]`, `actsAsUsers` true.
+
+- Targets and runs are registered as project items (`POST /external/projects/:id/items`; `item_type` `target`, `msa_run`, `cofold_run`; link `/dashboard?tab=alphapulldown`), updated on state changes and removed on delete. If Science cannot be told, the work is still saved and a warning is shown.
+- The routes that listed, created and deleted local projects are removed.
+- `alphapulldown_projects` is now only the link between one user's rows in one Science project and that user's workspace folder `P<n>` (new columns `science_project_id`, `items_pending`; `alphapulldown_targets.model_user_id`).
+- Old local projects are moved in the background after module start. Each becomes a Science project created as its owner (same name), and its targets and runs are listed on it. Runs whose old project no longer exists go to Science's Project template with `created_by` = their owner. A project whose owner cannot sign in or may not use AlphaPulldown stays readable (owner and staff), unchangeable, and is retried (the reason is in the backend log). The move is safe to repeat.
 
 ## No background process
 A run only advances while its owner has the page open (the tabs refresh Slurm/ABCFold state when loaded). Submitted jobs keep running on the cluster when the page is closed.
@@ -35,6 +43,8 @@ Each finished feature or co-folding job adds one anonymised row to alphapulldown
 backend/db/schema.sql is the source of truth, no migrations. New in this release: alphapulldown_library_config, alphapulldown_library_proteomes, alphapulldown_library_feature_sets, columns proteome_id/accession on project_sequences and provenance_json on msa_runs and cofold_runs; the settings table lost msa_use_mmseqs2 and gained pdb_seqres_path (core only adds tables/columns, so an existing install keeps the old column harmlessly).
 
 Target tables: alphapulldown_targets, alphapulldown_target_chains, alphapulldown_target_events.
+
+Added for Science projects (v0.1.23): columns science_project_id and items_pending on alphapulldown_projects, and model_user_id on alphapulldown_targets.
 
 ## Dependencies
 ciftools 0.2.5 (mmCIF reading) was added to the module's package.json.

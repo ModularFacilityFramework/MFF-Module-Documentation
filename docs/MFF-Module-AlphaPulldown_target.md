@@ -1,8 +1,8 @@
 # MFF-Module-AlphaPulldown: Target tab
 
-Step 1 of the new workflow (Target -> Baits -> pairing -> prediction -> ranked summary). The Target tab defines the protein or complex a project is about. It is saved as a draft at any time (valid or not) and confirmed explicitly. The Baits tab exists but is locked until the selected target is confirmed. Baits, pairing and prediction are not built yet.
+Step 1 of the new workflow (Target -> Baits -> pairing -> prediction -> ranked summary). The Target tab defines the protein or complex a target is about. It is saved as a draft at any time (valid or not) and confirmed explicitly. The Baits tab exists but is locked until the selected target is confirmed. Baits, pairing and prediction are not built yet.
 
-A project holds one or many targets (projects stay local to the module, per user, until core provides them). A selector under the project bar switches target; "+ New target" starts a blank draft; "Delete target" removes the target, its chains and events, and its model file.
+Targets belong to a Science project, picked above the tabs with core's ProjectPicker; a project holds one or many targets. A selector under the picker switches target; "+ New target" starts a blank draft; "Delete target" removes the target, its chains and events, its line on the project page and, if the caller loaded the model, its model file. Who may see a target is who may see its project (core's `coreApi.projects`, asked on every request): read access reads; write access is needed to change anything; an archived project is read-only; no access answers `404`; Science unavailable answers `503`. Anyone with write access can change any target of the project (the target shows who made it). Model files are written to the workspace of whoever loads them.
 
 Words: target = the protein or complex of interest (one or more chains). Genome = the UniProt proteome the target comes from (the baits will later be picked from it).
 
@@ -30,12 +30,14 @@ A complex with two or more different chain sequences is chimeric when any chain 
 Needs: at least one chain, a genome, and acceptance of the model if one is loaded. All chains are re-checked first. Changing the chains or genome of a confirmed target, or its model, reopens it as a draft and clears the chimera acknowledgement; a rename does not.
 
 ## Who sees it
-Only the owner. Developers and administrators can read every target (the tab lists them all, opened read-only) but cannot change one. Anyone else gets 404. Sharing is core's job, later.
+Who may see a target is who may see its Science project (core's `coreApi.projects`, asked on every request): read access reads; write access is needed to change anything; an archived project is read-only; no access answers `404`; Science unavailable answers `503`. Anyone with write access can change any target of the project (the target shows who made it).
 
 ## Record for the methods
 The tab shows a methods paragraph built from what was recorded (UniProt accessions with release and date, sequence edits, genome and assembly, which chains were confirmed, chimera acknowledgement, model source/id/version/date, confirmation date) and a history. Unrecorded facts are left out, never guessed. Events table: saved, checked_against_genome, reopened, chimera_acknowledged, confirmed, model_loaded, model_accepted, model_removed.
 
 ## API (under /api/alphapulldown)
+In `/projects/:id/...`, `:id` is the Science project id.
+
 - `GET /projects/:id/targets` — list the project's targets, with `readOnly` and `chimeraWarning`
 - `POST /projects/:id/targets` — create a target (201)
 - `GET`, `PUT`, `DELETE /targets/:tid`
@@ -49,7 +51,7 @@ The tab shows a methods paragraph built from what was recorded (UniProt accessio
 - `GET /target/genomes?q=`
 - Staff only: `GET /targets` (rows now carry `targetId`)
 
-Owner only. Developers and administrators can read others' targets but not change them; everyone else gets 404.
+Access follows the target's Science project: see "Who sees it".
 
 ## Tables (schema.sql)
 alphapulldown_targets (many rows per project: plain index `idx_target_project`, no longer UNIQUE), alphapulldown_target_chains, alphapulldown_target_events.

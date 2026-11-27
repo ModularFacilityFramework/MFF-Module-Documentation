@@ -20,4 +20,4 @@ set.json holds the configuration and, written by the first job that builds into 
 The folder must be writable by the account that runs mff-core (downloads, set folders) and by the accounts that run users' Slurm jobs (they add feature files and lock files); group-writable with the group bit inherited (the module creates folders as mode 2775 and runs jobs with umask 002).
 
 ## Operations
-Add a proteome: Library tab, search UniProt, "Add to library". Browse it and add proteins to a project: Sequences tab, Proteome source. Update after a database or software change: bump the tag in Setup. Remove: Library tab, staff, only when unused.
+Add a proteome: Library tab, search UniProt, "Add to library". (Adding proteins to a project was done in the old Sequences tab, which is no longer in the interface; its routes remain.) Update after a database or software change: bump the tag in Setup. Remove: Library tab, staff, only when unused.
