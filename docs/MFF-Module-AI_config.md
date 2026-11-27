@@ -111,6 +111,18 @@ Setup -> Model (switch permission as before):
 - `ai_tool_use` logs `web_read` with the host name only; for `web_search` nothing but the tool name is kept.
 - If the model is out of tool rounds, it is told that no more tool calls are possible and to answer from what it has.
 
+## MCP servers
+- The module has its own small MCP client (Model Context Protocol, Streamable HTTP, protocol 2025-06-18: `initialize`, `tools/list`, `tools/call`). Each tool of a registered MCP server becomes an ordinary tool of the module:
+  - its function name for the model is `mcp_<server key>_<tool>`, at most 64 characters (a hash is added when shortened);
+  - it is installed, switched on and given an audience (and optionally roles) on Setup → Tools like any tool;
+  - the guard reads the arguments the AI sends and the answer that comes back (an unsafe request is stopped, an unsafe answer withheld);
+  - every use is logged per answer in `ai_tool_use` (tool, server key).
+- Setup → Tools → "MCP servers" (changes need administrator or developer): add a server (key: lowercase, digits, `_`; name; `http(s)` address), switch it off or on, or remove it. The table shows each server's number of tools or its error. A "Source" filter shows the tools of one server. Saved in `ai_settings` `'mcp.servers'`; tool lists are cached 5 minutes.
+- The facility's servers run on the backend host (nusbf), `127.0.0.1` only, as the system user `aimcp`. Install and rollback: `tools/nusbf/mcp-install.sh` and `mcp-rollback.sh` in the module repo.
+  - `ai-mcp-pdbe.service`: the official PDBe MCP servers from EMBL-EBI (pdbe-mcp-server 2.0.1, Apache-2.0), at `http://127.0.0.1:8901/api/` (46 PDBe API tools: entries, molecules, ligands, validation, UniProt mappings, best structures, AI summaries, ...) and `http://127.0.0.1:8901/search/` (2 tools: PDBe Solr search and its schema).
+  - `ai-mcp-biomcp.service`: BioMCP (biomcp-cli 0.9.3, MIT, GenomOncology; not the unrelated PyPI "biomcp"), at `http://127.0.0.1:8902/mcp`. It has 7 read-only tools over PubMed, Europe PMC, PubTator3, UniProt, InterPro, STRING, PDB, AlphaFold and more. No API keys are set, and each data source keeps its own terms of use.
+- After a deploy, add the three servers on Setup → Tools and install the tools wanted. Not all 46 PDBe API tools need be on: each tool's description takes room in every question.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
