@@ -13,6 +13,9 @@ Add these by hand, then restart the backend. There is no page for them.
 | `MODULE_AI_MODELS` | yes | `keyword=Label\|capabilities;...`, capabilities from `vision`, `thinking`, `thinking-r1`, `tools`. Keywords must match the controller |
 | `MODULE_AI_GUARD_URL` | no | guard model server, e.g. `http://<gpu6>:8002`; without it there is no guard check (`docs/MFF-Module-AI_safety.md`) |
 | `MODULE_AI_DOCS_DIR` | no | folder with the docs, used when core has none (see "MFF docs tools") |
+| `MODULE_AI_SEARXNG_URL` | no | the facility's SearXNG for `web_search`, e.g. `http://127.0.0.1:8888` |
+| `MODULE_AI_WHISPER_URL` | no | Whisper speech to text on the AI server, e.g. `http://192.168.1.16:8003` |
+| `MODULE_AI_MARIADB_RO_HOST`, `MODULE_AI_MARIADB_RO_PORT`, `MODULE_AI_MARIADB_RO_USER`, `MODULE_AI_MARIADB_RO_PASSWORD` | no | the dedicated read-only MariaDB account for the database tool (developers only) |
 | `MODULE_AI_VLLM_API_KEY` | no | only if vLLM was started with a key |
 | `MODULE_AI_CTL_SSH_PORT` | no | default 22 |
 | `MODULE_AI_STORAGE_SUBDIR` | no | folder in each person's workspace, default `module-AI` |
@@ -29,7 +32,19 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
 ## Setup tabs
 - **Model:** what is loaded, switching (waits for running answers, or stops them), history, the instruction and sampling values per model. A switch takes about 2 to 3 minutes (about 10 minutes the first time a mode starts at a new context length), during which the AI answers nobody.
 - **Benchmark:** the same questions asked to several models; speed, automatic checks, 1-5 scores with model names hidden, CSV. The model loaded before is loaded again at the end. Chat questions wait meanwhile.
-- **Tools:** install, remove, switch on or off. Each installed tool has two limits: For (everyone, facility staff, or developers and administrators; the asker's level from Setup → Safety), and optionally roles (tick core roles to restrict it further). A tool is offered only when both allow the asker. Installing downloads nothing. Available: Date and time, Calculator, Unit converter, Read attached file, Edit Excel file, Edit Word file, Make a file. None is installed at first. Only models with the `tools` capability use them.
+- **Tools:** install, remove, switch on or off. Each installed tool has two limits: For (everyone, facility staff, or developers and administrators; the asker's level from Setup → Safety), and optionally roles (tick core roles to restrict it further). A tool is offered only when both allow the asker. Installing downloads nothing. Available:
+  - date and time, calculator, unit converter;
+  - read attached file;
+  - edit Word, edit Excel, make a file;
+  - MFF docs (index, search, read);
+  - Slurm (my queue, job state, cluster state);
+  - web search, read a web page;
+  - run Python (code sandbox), read structure and reflection files (gemmi);
+  - MFF database (read-only, developers only);
+  - speech to text (the microphone button; never given to the model);
+  - plus the tools of every MCP server added in the "MCP servers" section (the facility's: PDBe API, PDBe Search, BioMCP).
+
+  Each tool also has a status (tested, done, planned) in "What the AI can do" at the top of the tab. None is installed at first. Only models with the `tools` capability use them.
 - **Skills:** short written instructions the AI loads for one kind of task. Only administrators and developers can change them; others with the Setup page get a read-only view. See `docs/MFF-Module-AI_skills.md`.
 - **Safety:** the safety and scope checks, which roles count as facility staff, extra server names to hide, added delay and the questions and answers stopped. Changes need administrator or developer. See `docs/MFF-Module-AI_safety.md`.
 - **Limits:** every quota and limit. Changes apply within a few seconds.
@@ -66,7 +81,7 @@ Setup -> Model (switch permission as before):
 - Where the docs come from: `coreApi.docs` (core 0.1.219: `available`, `list`, `read`) when core has docs. Core has docs only where an MFF-docs checkout sits beside the core checkout; production has none today. Otherwise the folder in `MODULE_AI_DOCS_DIR`. Where neither has docs, the docs tools are not offered, the AI says the docs are not available on this server, and Setup → Tools shows a warning.
 - Who may read which doc (the user's rule, 26/11/2026): `*_user-guide.md` files are for everyone; every other doc (install, admin, security, server, deployment, API) is for facility staff and developers. `INDEX.json` in `MODULE_AI_DOCS_DIR`, if it ever exists, can set an audience per file. The check is in the backend: a doc above the asker's level is never listed, searched or read. A user guide that names another doc only shows its name, never its text.
 - Setup → Tools: "MFF docs the AI can read" lists each doc with its area, audience and summary. "Tools used in answers" lists the last 50 tool uses.
-- Data: `ai_tool_use` has one row per tool call (answer_id, user_id, level, tool, target, ok, keyword). `target` is a doc or skill name only, never the question, the arguments or the result.
+- Data: `ai_tool_use` has one row per tool call (answer_id, user_id, level, tool, target, ok, keyword). `target` is only what the tool was used on, when that is a shared resource: the doc name (`read_doc`), the skill name or skill/file (`load_skill`, `read_skill_file`), the host name of a web page (`web_read`), the MCP server key (MCP tools), or `'mariadb'` (the database tool). It is never the question, the full arguments or the result. The database tool logs its query text separately, in `ai_db_query_log`.
 - Also new on Setup → Tools and Skills: "What the AI can do" lists each tool and skill with a status: tested (tried with real questions on the AI server), done (built), or planned.
 
 ## Slurm tools
@@ -177,6 +192,6 @@ Setup -> Model (switch permission as before):
   - `ai_skill_audit`: who created, changed, switched on or off, or deleted which skill.
   - `ai_skills.audience` (new column): who the skill is for (everyone, facility staff or developers).
   - `ai_safety_log`: one row per safety check; never any question or answer text.
-  - `ai_tool_use`: one row per tool call (answer id, user, level, tool, target, ok, model keyword); `target` is a doc or skill name only.
+  - `ai_tool_use`: one row per tool call (answer id, user, level, tool, target, ok, model keyword); `target` is only what the tool was used on, when that is a shared resource: the doc name (`read_doc`), the skill name or skill/file (`load_skill`, `read_skill_file`), the host name of a web page (`web_read`), the MCP server key (MCP tools), or `'mariadb'` (the database tool). It is never the question, the full arguments or the result. The database tool logs its query text separately, in `ai_db_query_log`.
 - Hourly cleanup (`actsAsUsers` in the manifest): abandoned uploads after a day, deleted chats after the limit "Keep deleted chats". Files of people deleted from MFF are not removed.
 - If the backend is restarted while an answer is being written, that answer is lost; the page offers "Answer it now".
