@@ -159,7 +159,8 @@ next has access to a real deployment:
    only describe it as "the current project setting", without documenting
    the key name or lookup path precisely.
 2. Whether `doppio-web`'s Uvicorn stack needs WebSockets for any live UI
-   update — see the coreApi gap below; the proxy is HTTP-only today.
+   update. This module's proxy is HTTP-only today and registers no upgrade
+   handler.
 3. Stability of grepping `"Doppio is now running."` in `doppio-web.log`
    across `doppio-web` versions, and whether the 120s default startup
    timeout is realistic.
@@ -177,7 +178,8 @@ next has access to a real deployment:
 
 Per this repo's own `CLAUDE.md`: a capability this module needs that isn't
 in `coreApi` is a gap to flag, never a reason to reach into `mff-core`
-directly. Recorded here for anyone considering a future `coreApi` change:
+directly. Recorded here for anyone considering a future `coreApi` change
+(item 2 is no longer a gap):
 
 1. **No generic reverse-proxy/streaming primitive.** `callModule` is
    single-shot request/response by design. This module doesn't need one —
@@ -185,9 +187,10 @@ directly. Recorded here for anyone considering a future `coreApi` change:
    never through `callModule` — but a first-class "proxy a live sub-service
    for a session's duration" primitive would spare future modules from
    hand-rolling the ticket/cookie/token-injection scheme above.
-2. **No WebSocket-upgrade-forwarding from core down into a module's mounted
-   router.** This module's router is a sub-router inside core's own single
-   `http.Server`, which core doesn't expose for `'upgrade'` event handling.
-   If open item 2 above confirms `doppio-web` needs WebSockets, this
-   becomes a hard blocker requiring a core-side change — not fixable from
-   this repo alone.
+2. **WebSocket forwarding is not implemented here.** Core now provides
+   `coreApi.registerUpgradeHandler` (`docs/MFF-Core_module-core-api.md`,
+   "WebSocket"), so this is no longer a core gap. If open item 2 shows
+   `doppio-web` needs WebSockets, this module must add `"websocket": true` to
+   its manifest and register an upgrade handler that authenticates with its own
+   proxy ticket (`identify`) and forwards to the session; nothing of that is
+   built or tested.
