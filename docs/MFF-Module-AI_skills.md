@@ -46,7 +46,7 @@ Skills live in the module's own database:
 ## API (all under `<api>/ai`, page setup; writes need administrator or developer)
 - `GET /setup/skills`: the list, limits, template, recent loads and recent changes.
 - `GET /setup/skills/:id`
-- `POST /setup/skills` `{content, tag, audience: 'user'|'staff'|'developer', enabled, files:[{name, content}]}`
+- `POST /setup/skills` `{content, tag, audience: 'standard'|'advanced', enabled, files:[{name, content}]}`. The older values `'user'`, `'staff'` and `'developer'` are still accepted and read as standard, advanced and advanced.
 - `PUT /setup/skills/:id` with the same body. It replaces all files of the skill.
 - `POST /setup/skills/:id/enabled` `{enabled}`
 - `DELETE /setup/skills/:id`

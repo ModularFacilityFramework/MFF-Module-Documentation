@@ -34,8 +34,8 @@ The guard, scope check and output scan apply to the Standard level. For the Adva
 
    Text is shown in pieces that end at white space, so a pattern is never split.
 
-## Developers are not slowed down
-- This is the Advanced level: no scope check and no output scan.
+## The Advanced level is not slowed down
+- At the Advanced level (developers and administrators) there is no scope check and no output scan.
 - Guard off by default; it can be switched on.
 - Measured on 26/11/2026, with 15 normal developer tasks:
   - questions alone: none flagged;
