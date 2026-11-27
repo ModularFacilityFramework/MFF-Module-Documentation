@@ -82,6 +82,7 @@ coreApi.usePageState (the picker does this through rememberAs).
 - GET /external/project-status: any signed-in user. {has_project, project_count, can_create, can_request, link}.
 - POST /external/projects now answers 403 to someone with no project.
 - Project lists: the Project template comes first, then the other projects by number. Lists and single projects also carry item_counts: {moduleid: n}; in the Project template the own-items rule applies. core's /api/projects (v0.1.223) does not pass item_counts or is_template on.
+
 ## Science's own routes for requests (module access needed)
 - GET /status: as /external/project-status without link, plus pending_request (or null) and new_decisions.
 - GET /request-options: {groups: [{id, label}], pis: [{id, label}]}.
