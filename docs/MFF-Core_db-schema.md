@@ -72,11 +72,11 @@ Account types: a `standard` account can log in (login, refresh and password rese
 
 ### setup_registration_claims
 A pending registration that uses the username or email of a no-login record (core v0.1.222). In `schema.sql`, and also created at startup.
-- user_id PK REFERENCES setup_users(id) ON DELETE CASCADE (the pending registration)
-- target_user_id NULL REFERENCES setup_users(id) ON DELETE SET NULL (the matched record)
-- requested_username UNIQUE
-- requested_email UNIQUE
-- created_at
+- user_id BIGINT NOT NULL PK REFERENCES setup_users(id) ON DELETE CASCADE (the pending registration)
+- target_user_id BIGINT NULL REFERENCES setup_users(id) ON DELETE SET NULL (the matched record)
+- requested_username VARCHAR(50) NOT NULL UNIQUE
+- requested_email VARCHAR(255) NOT NULL UNIQUE
+- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 ### setup_user_roles
 - id BIGINT PK
@@ -295,16 +295,18 @@ Indexes: `idx_bg_audit_created (created_at)`, `idx_bg_audit_module (module_id, c
 
 ### core_user_merge_log
 Who merged a registration into a no-login record, or rejected such a registration (core v0.1.222). In `schema.sql`, and also created at startup.
-- id
-- created_at
-- action ENUM('merge','reject')
-- performed_by
-- performed_by_username
-- source_user_id
-- source_username
-- target_user_id
-- target_username
-- details (JSON snapshot of both rows; never password hashes or MFA secrets)
+- id BIGINT AUTO_INCREMENT PK
+- created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+- action ENUM('merge','reject') NOT NULL
+- performed_by BIGINT NULL
+- performed_by_username VARCHAR(50) NULL
+- source_user_id BIGINT NOT NULL
+- source_username VARCHAR(50) NOT NULL
+- target_user_id BIGINT NULL
+- target_username VARCHAR(50) NULL
+- details MEDIUMTEXT NOT NULL (JSON snapshot of both rows; never password hashes or MFA secrets)
+
+Indexes on `target_user_id` and `source_user_id`.
 
 ## ERD (conceptual)
 
