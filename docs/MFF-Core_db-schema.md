@@ -68,7 +68,15 @@ Seeded with: PhD student, Master student, PI, Staff, Postdoc, Senior Postdoc, RA
 - last_login TIMESTAMP NULL
 - created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
-Account types: a `standard` account can log in (login, refresh and password reset work only for standard accounts, and login only when also `active`). A `no_login` account is a contact/record: its `password_hash` is the unusable value `!no_login`, it has no MFA, it never logs in, it can still be `active`/`inactive`, and it can be a group member and a PI. Created with `POST /users/no-login` (`registration_pending` 0, one role row `facility_user`). A self-registration is created `inactive` with `registration_pending = 1`; approving or rejecting it (`POST /users/:id/approve`, `/reject`) clears the flag.
+Account types: a `standard` account can log in (login, refresh and password reset work only for standard accounts, and login only when also `active`). A `no_login` account is a contact/record: its `password_hash` is the unusable value `!no_login`, it has no MFA, it never logs in, it can still be `active`/`inactive`, and it can be a group member and a PI. Created with `POST /users/no-login` (`registration_pending` 0, one role row `facility_user`). A self-registration is created `inactive` with `registration_pending = 1`; approving or rejecting it (`POST /users/:id/approve`, `/reject`) clears the flag. A registration that uses the username or email of a no-login record is handled differently (core v0.1.222): see `setup_registration_claims` below and `docs/MFF-Core_api.md`, "Merging a registration into a no-login record".
+
+### setup_registration_claims
+A pending registration that uses the username or email of a no-login record (core v0.1.222). In `schema.sql`, and also created at startup.
+- user_id PK REFERENCES setup_users(id) ON DELETE CASCADE (the pending registration)
+- target_user_id NULL REFERENCES setup_users(id) ON DELETE SET NULL (the matched record)
+- requested_username UNIQUE
+- requested_email UNIQUE
+- created_at
 
 ### setup_user_roles
 - id BIGINT PK
@@ -284,6 +292,19 @@ One row per `coreApi.callModuleAsUser` call and per `coreApi.getUserWorkspacePat
 - status INT NULL (the HTTP status from the target)
 
 Indexes: `idx_bg_audit_created (created_at)`, `idx_bg_audit_module (module_id, created_at)`, `idx_bg_audit_user (user_id, created_at)`.
+
+### core_user_merge_log
+Who merged a registration into a no-login record, or rejected such a registration (core v0.1.222). In `schema.sql`, and also created at startup.
+- id
+- created_at
+- action ENUM('merge','reject')
+- performed_by
+- performed_by_username
+- source_user_id
+- source_username
+- target_user_id
+- target_username
+- details (JSON snapshot of both rows; never password hashes or MFA secrets)
 
 ## ERD (conceptual)
 

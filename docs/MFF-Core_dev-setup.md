@@ -120,6 +120,17 @@ Modules are set up by hand, once the core is installed (with the installer or th
   cd App_frontend && npm test
   ```
 
+### Throwaway database for tests that write
+`scripts/isolated-db.sh <command> [args]` runs a command against a throwaway MariaDB in private network and mount namespaces: only loopback, with the real server's socket and port unreachable. It checks this first and refuses to run if any check fails.
+
+- It exports `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME=mff_test` (with `schema.sql` imported) and `MFF_TEST_DB_SOCKET`.
+- Mail sent with `mail` goes to the file `$MFF_ISOLATED_MAIL_LOG`.
+- Use it for any test that writes to a database. For example, with Node 20 on `PATH`:
+  ```bash
+  scripts/isolated-db.sh bash -c 'cd App_backend && npx jest --forceExit'
+  ```
+- One installer test fails inside it, because it expects a mail server on port 25.
+
 ## Useful tips
 - Set `CORS_ORIGINS` to your dev origin if needed (e.g., http://localhost:3000).
 - Use `.editorconfig` and Prettier extension in your editor for consistent formatting.

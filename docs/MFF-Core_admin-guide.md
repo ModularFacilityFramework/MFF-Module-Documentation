@@ -13,7 +13,7 @@ This guide explains how administrators manage users, roles, and system configura
 ### Users screen (Setup → Users)
 - Each user has a Type badge: **Standard** or **No login**.
 - The lists are Pending Approval, Active and Inactive.
-- A self-registration appears under Pending Approval (it is inactive with `registration_pending` set). Use **Approve** or **Reject**; both only exist for pending registrations and clear the pending flag. "Inactive" no longer means "pending approval".
+- A self-registration appears under Pending Approval (it is inactive with `registration_pending` set). Use **Approve** or **Reject**; both only exist for pending registrations and clear the pending flag. "Inactive" no longer means "pending approval". A registration that matches a no-login record is handled differently: see "Merging a registration into a no-login record" below.
 - The edit form has **Status** (Active/Inactive, for every account) and **Account type**.
 - **Make inactive** replaces "Archive".
 - The user receives an email notification on status change.
@@ -32,6 +32,28 @@ Setup → Users has a green **+ Create No-Login User** button (developer and adm
 - **Required:** username, first name, last name, email. Username and email must be unique, case-insensitively. The form checks the loaded list as you type, and the server answers a duplicate with an error.
 - **Optional:** group, job position, university/affiliation, company, faculty, institute, building, room, phone, profile link, LinkedIn link, group website. The status defaults to active.
 - To let the person sign in later, edit the user, set Account type to Standard and give a password (see above).
+
+### Merging a registration into a no-login record
+Core v0.1.222. Merging is for developers and administrators only.
+
+A person who already has a no-login record registers with their real username and email. In Pending Approval the row says "Matches no-login record #id (username)" and offers **Approve & merge…** and **Reject** (no plain Approve or Edit). Rejecting removes only the request; the record is unchanged.
+
+**Approve & merge…** is also on other pending rows (for example an earlier duplicate `name_1`). **Merge into record…** is on inactive login accounts that never logged in.
+
+Steps:
+1. Choose the record to keep: pick a suggestion (each shows its reasons) or search all no-login records.
+2. Read the preview. It has a table of fields; where the two differ, choose which value to keep (the default is the record's). It also shows what is kept, moved and removed, and any warnings.
+3. Tick "same person".
+4. Confirm.
+
+Result:
+- The record keeps its id, group, PI links and job position. It takes the registration's password and two-factor setup and becomes a login account. The duplicate row is removed.
+- Two login accounts are never merged.
+- Only a developer can approve a merge that gives the developer role.
+- Workspace files of the removed id are not moved (the preview warns about this).
+- If the approval email fails, the screen says so.
+
+**Merge log**, at the bottom of the screen, lists who did it, when, and which records. An open merge screen is still there after leaving or reloading the page, but the "same person" tick is not kept.
 
 ### Groups screen
 - A group can have **several PIs**, exactly one of them primary. PIs are chosen from users (no-login accounts can be PIs). The PI selector offers only users whose job position is PI, so set a user's Job position to PI in Setup → Users first. PIs already linked to a group stay shown even if their position is not PI. The group's PI name and email are a copy of the primary PI; a group with no linked PI keeps free text.

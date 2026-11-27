@@ -21,6 +21,17 @@ POST /auth/register-mail
 - Same body/behavior as `register-smtp`, but notifies via the local `mail` command instead of SMTP.
 - Response: `{ success: true, message, mfaSetupToken }`
 
+Registering with the username or email of a no-login record (both register routes, core v0.1.222):
+- The username or email of a **no-login** record is accepted. The registration is a new pending row linked to that record; the record is not changed.
+- For whatever collides, the pending row holds a placeholder: `~reg-<hex>` (username) and/or `~reg-<hex>@pending.invalid` (email).
+- Refused with `400`:
+  - "Username already exists" (a login account has it);
+  - "An account with this email already exists" (a login account has it);
+  - "A registration with this username or email is already waiting for approval. Please contact an administrator.";
+  - usernames starting with `~`.
+- The admin notification mail names the matched record.
+- Login with a username that has a waiting registration answers "Account is not active. Please contact an administrator."
+
 POST /auth/login
 - Access: Public
 - Body: `{ username, password }`
@@ -83,6 +94,7 @@ GET /users
 - Query (optional): `page`, `limit`, `sortBy`, `sortDir`, `search`. The default order is by name (first name, last name, username), not by id. `sortBy` accepts `name` (the new default), `id`, `username`, `email`, `status`, `created_at`, `last_login`, `first_name` and `last_name`.
 - Response (paginated): `{ success, items, total, page, pages, limit }` — each item includes `roles: [{ role }]`
 - Each user also includes `job_position_id` and `job_position`, and `account_type` (`standard` or `no_login`) and `registration_pending`.
+- Each user also includes `requested_username`, `requested_email`, `merge_target_id` and `merge_target_username` (core v0.1.222; see "Merging a registration into a no-login record" below).
 - Response (unpaginated/legacy): `{ success, users }`
 
 GET /users/:id
@@ -110,10 +122,11 @@ GET /users/job-positions
 POST /users/:id/approve
 - Access: Protected, `developer` or `administrator`
 - Only for a pending registration (`registration_pending = 1`). Clears the flag.
+- May answer `409 { mergeRequired: true }` (see "Merging a registration into a no-login record" below).
 
 POST /users/:id/reject
 - Access: Protected, `developer` or `administrator`
-- Only for a pending registration. Clears the flag.
+- Only for a pending registration. Clears the flag. For a registration that matches a no-login record, it removes only the request (see "Merging a registration into a no-login record" below).
 
 POST /users/:id/activate
 - Access: Protected, `developer` or `administrator`
@@ -128,6 +141,18 @@ PUT /users/:id/status
 DELETE /users/:id
 - Access: Protected, `developer` or `administrator`
 - Cascades to the user's roles and other owned rows.
+
+### Merging a registration into a no-login record
+Core v0.1.222. All four routes are for `developer` or `administrator` only. Errors are `{ success: false, message, blockers?, stale? }`.
+
+- `GET /users/merge-log` — Response: `{ success, entries: [{ id, created_at, action: 'merge'|'reject', performed_by, performed_by_username, source_user_id, source_username, target_user_id, target_username }] }`
+- `GET /users/:id/merge-candidates` — Response: `{ success, source, problem, linked_target_id, suggestions, records }`. Each of `suggestions` is a record plus `score` and `reasons[]`; `records` is all no-login records.
+- `POST /users/:id/merge-preview` — Body: `{ target_id, choices: { <field>: 'record'|'registration' } }`. Response: `{ success, plan: { source, target, result_username, result_email, result_roles, fields[], changes[], kept[], moved[], dropped[], warnings[], blockers[], fingerprint } }`
+- `POST /users/:id/merge` — Body: `{ target_id, choices, fingerprint }`. Response: `{ success, id, username, emailed, message }`. `409` with `stale: true` if anything changed since the preview.
+
+Pending registrations that match a record:
+- Activating or approving a registration whose requested username or email a record still holds returns `409 { mergeRequired: true }`. This also applies to `PUT /users/:id` setting it to `active` or to `no_login`. If both the username and the email are free again, they are restored and the request goes ahead.
+- Rejecting (or deactivating) such a pending registration removes only the request: `{ success, removed: true, message: "Registration rejected. The existing record is unchanged." }`, and it is logged.
 
 ## Groups (`/groups`)
 

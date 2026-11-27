@@ -80,6 +80,7 @@ Sorted by first name, then last name, then username (case-insensitive); it used 
 **What counts as a real person.** Core v0.1.213:
 - There is no deleted marker: deleting a user is a hard `DELETE`, so a user in the list exists.
 - A row with `registration_pending = 1` (a self-registration nobody has approved) is skipped.
+- A pending registration that matches a no-login record is returned with placeholder values (`~reg-...`) for the username and/or email, always with `registration_pending = 1`, so the rule above covers it (core v0.1.222; no function changed). When it is merged, the no-login record keeps its id, so ids that modules have stored stay valid.
 - `status = 'inactive'` means disabled by an admin. This applies to no-login contacts too, which are created active by default.
 - `account_type` `standard` can log in; `no_login` is a contact that never logs in.
 - A user has one group (`group_id`) and one job position (`job_position_id`), each nullable. The PIs of other groups are in `setup_group_pis` (see `getGroupPis(groupId)` / `listGroupPis()`).
