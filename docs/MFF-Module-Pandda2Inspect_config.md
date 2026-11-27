@@ -60,6 +60,10 @@ them use those routes: the role check still refuses them. `frontend/index.js`
 registers the tab with `pageKey: 'setup'`, so core hides it from anyone
 without access to the page (needs core v0.1.144+).
 
+## Who can load the app's files
+
+Core requires a login on every module route except those in the manifest's `publicRoutes`, and an iframe can't send the login header. So the manifest lists `GET /app/*` as public and this module checks those requests itself (`backend/services/appTicket.js`): every file under `/app` needs a valid signed cookie, otherwise `401`. Only `GET /config`, which needs a login and passes core's module access check, sets it: valid for one hour, `HttpOnly`, `SameSite=Strict`, sent only to the module's `/app/` path, and `Secure` when the request is https (a proxy must send `X-Forwarded-Proto`). The inspection tab renews it every 10 minutes. The signing key is made anew at each backend start. A user who logs out or loses access can still load the app's files from that browser until the last cookie expires (at most an hour); saving a decision always needs a login.
+
 ## Inspections belong to projects
 
 The manifest has `"requires": ["science"]` and `"actsAsUsers": true`, so Science must be installed before this module is installed or updated. It needs core v0.1.227 or later. Core's `ProjectTabs` sits at the top of the inspection tab, one tab per project the user can see; the chosen tab is remembered per user. A tab shows that project's inspections (who saved each one, when, and the file name, in a sortable table whose sort is remembered) and, only where the user can add to the project (not read-only, archived or the Project template), the app. The app reloads when the project changes, so anything unsaved inside it is lost then. Each saved decision is one inspection: a row in `pandda2inspect_inspections` (project, file name, who saved it) and a project item in Science (`item_type` `inspection`, link `/dashboard?tab=pandda2inspect`).
@@ -68,9 +72,11 @@ Decisions saved before this go into Science's "Project template", found through 
 
 ## `GET /config`
 
-Any authenticated user. Returns `{ deployEnabled }` —
-`true` only when `MODULE_PANDDA2INSPECT_APP_DIR` is set (and therefore
-`/app` is actually mounted and serving something).
+Any authenticated user who passes core's module access check. Returns
+`{ deployEnabled, appPath }`. `deployEnabled` is `true` only when
+`MODULE_PANDDA2INSPECT_APP_DIR` is set (and therefore `/app` is actually
+mounted and serving something). When the app is configured, it also sets the
+signed cookie described in "Who can load the app's files".
 
 ## `POST /decisions`
 
