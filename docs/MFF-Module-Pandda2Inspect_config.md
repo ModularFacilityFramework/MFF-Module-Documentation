@@ -62,7 +62,7 @@ without access to the page (needs core v0.1.144+).
 
 ## Inspections belong to projects
 
-The manifest has `"requires": ["science"]` and `"actsAsUsers": true`, so Science must be installed before this module is installed or updated. On the inspection tab the user picks a project with core's `ProjectPicker` (only projects they can write to can be chosen). The app is shown once one is chosen, and reloads when the project changes, so anything unsaved inside the app is lost then. The chosen project is remembered per user. Each saved decision is one inspection: a row in `pandda2inspect_inspections` (project, file name, who saved it) and a project item in Science (`item_type` `inspection`, link `/dashboard?tab=pandda2inspect`).
+The manifest has `"requires": ["science"]` and `"actsAsUsers": true`, so Science must be installed before this module is installed or updated. It needs core v0.1.227 or later. Core's `ProjectTabs` sits at the top of the inspection tab, one tab per project the user can see; the chosen tab is remembered per user. A tab shows that project's inspections (who saved each one, when, and the file name, in a sortable table whose sort is remembered) and, only where the user can add to the project (not read-only, archived or the Project template), the app. The app reloads when the project changes, so anything unsaved inside it is lost then. Each saved decision is one inspection: a row in `pandda2inspect_inspections` (project, file name, who saved it) and a project item in Science (`item_type` `inspection`, link `/dashboard?tab=pandda2inspect`).
 
 Decisions saved before this go into Science's "Project template", found through Science's route, never by title. It runs about 15 seconds after the backend starts, retries until it succeeds (calling Science as an administrator or developer), and only takes files older than the backend's start. The author comes from the file name; if no single user matches, the item has no author and only the template's owner and administrators see it (`saved_by` 0). New work cannot be saved into the template.
 
@@ -82,6 +82,10 @@ download inside the iframe and posts the file here instead. It depends on the
 app's download keeping that file name — if the app renames it, the download
 reaches the user's browser again and nothing is saved. If saving fails, the
 tab shows an error above the app.
+
+## `GET /inspections`
+
+`GET /inspections?projectId=<id>`, for a user who can read that project. Returns `{ ownOnly, inspections: [{ id, fileName, savedBy, savedAt }] }`, newest first; `savedBy` is "First Last (username)", or empty for an unknown author. In the Project template a user is shown only their own, unless they own the template or are an administrator or developer; if core doesn't say whether a project is the template, it is treated as one. `400` without a project, `404` for a project the user can't read, `503` on a core without projects. It lists records only; it gives no access to the decision files.
 
 ## `GET /decisions/download`
 
