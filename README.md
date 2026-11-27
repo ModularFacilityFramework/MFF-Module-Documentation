@@ -83,6 +83,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 | [`MFF-Module-AlphaPulldown_overview.md`](docs/MFF-Module-AlphaPulldown_overview.md) | AlphaPulldown module (`alphapulldown`) — overview |
 | [`MFF-Module-AlphaPulldown_library.md`](docs/MFF-Module-AlphaPulldown_library.md) | AlphaPulldown module — shared proteome and feature library |
 | [`MFF-Module-AlphaPulldown_target.md`](docs/MFF-Module-AlphaPulldown_target.md) | AlphaPulldown module — Target tab |
+| [`MFF-Module-CryoEM_projects.md`](docs/MFF-Module-CryoEM_projects.md) | CryoEM module: projects |
 | [`MFF-Module-Desk_remote-desktop.md`](docs/MFF-Module-Desk_remote-desktop.md) | Desk module — Remote Desktop |
 | [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
 | [`MFF-Module-Finance_overview.md`](docs/MFF-Module-Finance_overview.md) | Finance module (`finance`) |
