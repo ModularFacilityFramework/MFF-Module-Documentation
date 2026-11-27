@@ -7,6 +7,7 @@ The AI tab is a chat with the AI model that runs on the facility's own GPU serve
 - Administrators cannot read your chats through MFF: titles, texts and files are only in your own storage, not in the database.
 
 ## Chatting
+- If the facility has switched it on, press 🎤 Speak to say your question: the text appears in the box for you to check before sending.
 - The AI knows today's date and time. If the facility has switched it on, it can also search the web and read public web pages; it then names the pages it used. Only your search words leave the facility.
 - **Enter** sends, **Shift+Enter** makes a new line. **Stop** ends an answer; what was written so far is kept.
 - **Think first** (Qwen): slower, better for hard questions. The thinking is shown separately; click it to read it.

@@ -142,6 +142,21 @@ Setup -> Model (switch permission as before):
 - Images: every uploaded image is also read with Tesseract in the sandbox. The text is kept only when it has real words. A model that can see images (Qwen, Mistral) reads the image itself; a model that cannot (DeepSeek) gets the OCR text instead of "an image this model cannot see".
 - Installed from Debian on the backend host by `tools/nusbf/ocr-install.sh` (`ocrmypdf`, `tesseract-ocr`, `tesseract-ocr-eng` and dependencies). `ocr-rollback.sh` removes exactly the packages that script added. More languages: one `tesseract-ocr-<lang>` package each.
 
+## Speech to text
+- What the user sees: a 🎤 Speak button in the chat. The browser records (MediaRecorder; it needs `https`) and the module sends the recording to Whisper on the AI server. The text is added to the question box for the person to check and send. When sent, the question goes through the guard like any other.
+- The "Speech to text (microphone)" entry on Setup → Tools switches the button on, with an audience and roles. It is never offered to the model as a tool. `GET /ai/config` returns `speech: true/false` for the person.
+- Route: `POST <api>/ai/transcribe` with the recording as the body. Limits: 25 MB, 10 minutes, 30 recordings per 10 minutes per person.
+- Errors: `403` not switched on for you; `400` nothing recorded; `413` too long; `422` unreadable; `503` Whisper not available.
+- Log: `ai_transcribe_log` has one row per recording (user, seconds of audio, ms, ok) and no text. The recording is not kept.
+- Whisper service on gpu6:
+  - model: Whisper large-v3-turbo (`dropbox-dash/faster-whisper-large-v3-turbo`, MIT), with faster-whisper 1.2.1 and 8-bit weights (`int8_float16`);
+  - placement: GPU 3, next to Qwen and the guard, using 1.6 GB;
+  - service: `ai-whisper.service` on `192.168.1.16:8003` (private address), started 150 s after the controller and guard;
+  - a facility vocabulary hint (Krios, apoferritin, HEPES, ...) helps with technical words;
+  - speed: about 0.2–0.7 s for 8 s of speech;
+  - files: `tools/gpu6/whisper_server.py`, `whisper-install.sh`, `whisper-rollback.sh` (`--all` also removes the venv and model).
+- Config key `MODULE_AI_WHISPER_URL` (optional), for example `http://192.168.1.16:8003`.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
