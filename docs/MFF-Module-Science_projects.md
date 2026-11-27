@@ -26,11 +26,11 @@ items. Access control is at the application level only: Science sets no file per
 
 ## A project before project work
 - A person has a project when they can write in at least one that is not archived and is not the Project template (as owner, or shared with them or their group with write; administrators and developers write in every project).
-- Someone with no project cannot create one: "+ New project" is hidden in Science, and creating is refused with 403 (Science's page, POST /external/projects, and the provider's create; the provider's canCreate answers false). Someone who has a project can create more; administrators and developers can always create.
+- Someone with no project cannot create one: "+ New project" is hidden in Science, and creating is refused with 403 (Science's page, POST /external/projects, and the provider's create; the provider's canCreate answers false). Administrators and developers can always create. Whether someone who has a project can create more is core's decision on core 0.1.224 or later (coreApi.projects.mayCreate: this rule plus core's setting "people with a project may create more", default yes): Science's page, POST /external/projects, GET /status, GET /external/project-status and the provider's status and requests.create follow it, so with the setting off such a person sends a request instead. On an older core they can create more.
 - Modules ask GET /external/project-status before project-based work, and send a person with has_project false to the returned link.
 
 ## Request a project
-- Science has a third tab, "Project requests". A person who cannot create fills in: title, a short text (required, at most 2000 characters), optionally a group and a PI (a user whose job position is "PI"). One request can wait at a time; the person can cancel it. A notice on the other Science tabs says they have no project, or that their request is waiting.
+- Science has a third tab, "Project requests". A person who cannot create (no project, or core's setting does not let them create more) fills in: title, a short text (required, at most 2000 characters), optionally a group and a PI (a user whose job position is "PI"). One request can wait at a time; the person can cancel it. A notice on the other Science tabs says they have no project, or that their request is waiting.
 - Approvers: administrators, developers, and whoever is granted Science's page "Approve project requests" (key project_approvals; Setup -> Preferences -> Access). They see the requests on the same tab, with a count on its title, and approve or decline with an optional note. Approving creates the project with the requester as owner, with the request's title and text. An approver who is not an administrator or developer cannot decide their own request. A module cannot read or decide requests.
 - The requester sees the decision in Science (a notice, and "new" in their list) until they open the tab. On core 0.1.224 or later Science also notifies them with coreApi.notify (title, the decision, the project number or the note, link /dashboard?tab=science). Approvers are not notified of a new request: they see the count in Science.
 - A person needs access to the Science module to use this tab.
@@ -80,7 +80,7 @@ coreApi.usePageState (the picker does this through rememberAs).
 - At module startup there is no request in flight: use callModuleAsUser ("actsAsUsers": true) from a timer that retries (the server may not be listening inside register()), or move the items on the first request with callModule.
 - link is an in-app path, for example /dashboard?tab=abcfold.
 - GET /external/project-status: any signed-in user. {has_project, project_count, can_create, can_request, link}.
-- POST /external/projects now answers 403 to someone with no project.
+- POST /external/projects answers 403 to someone who cannot create a project.
 - Project lists: the Project template comes first, then the other projects by number. Lists and single projects also carry item_counts: {moduleid: n}; in the Project template the own-items rule applies. core's /api/projects (v0.1.223) does not pass item_counts or is_template on.
 
 ## Science's own routes for requests (module access needed)
