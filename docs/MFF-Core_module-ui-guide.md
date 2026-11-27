@@ -97,6 +97,9 @@ No custom font stack — the browser default. Sizes used consistently:
 ```
 
 **Table** (the dominant pattern for any list of things — see `PreferencesTab.js`'s Modules tab):
+
+Tables: every column header with data must offer ascending and descending sort buttons, with natural sorting and the choice saved per user. Use core's coreApi.useSortedRows and coreApi.ui.SortHeader rather than writing your own; see 'Sortable tables' in MFF-Core_module-core-api.md.
+
 ```js
 // wrapper: { border: '1px solid #ddd', borderRadius: '4px', overflow: 'auto' }
 // table: { width: '100%', borderCollapse: 'collapse' }
