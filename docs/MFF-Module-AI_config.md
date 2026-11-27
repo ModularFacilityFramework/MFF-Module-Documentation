@@ -212,7 +212,7 @@ Setup -> Model (switch permission as before):
   - `ai_skills.audience` (new column): the skill's level, Standard or Advanced (older stored values are still read, see "Levels and kinds of tool").
   - `ai_safety_log`: one row per safety check; never any question or answer text.
   - `ai_tool_use`: one row per tool call (answer id, user, level, tool, target, ok, model keyword); `target` is only what the tool was used on, when that is a shared resource: the doc name (`read_doc`), the skill name or skill/file (`load_skill`, `read_skill_file`), the host name of a web page (`web_read`), the MCP server key (MCP tools), or `'mariadb'` (the database tool). It is never the question, the full arguments or the result. The database tool logs its query text separately, in `ai_db_query_log`.
-  - `ai_transcribe_log`: one row per recording (user, seconds of audio, ms, ok); no text.
-  - `ai_db_query_log`: every query of both database tools: answer id, user, database, the query text, rows returned, ms, ok, error. It holds the SQL written by the AI for developers, not the chat.
+  - `ai_transcribe_log`: one row per recording from the chat's microphone (user, seconds of audio, ms, ok). It holds no text, and the recording is not kept.
+  - `ai_db_query_log`: every query of the two database tools (Advanced level only): answer id, user, database (`mariadb` or `mssql`), the query text, rows returned, ms, ok, error. It holds the SQL the AI wrote, not the chat.
 - Hourly cleanup (`actsAsUsers` in the manifest): abandoned uploads after a day, deleted chats after the limit "Keep deleted chats". Files of people deleted from MFF are not removed.
 - If the backend is restarted while an answer is being written, that answer is lost; the page offers "Answer it now".
