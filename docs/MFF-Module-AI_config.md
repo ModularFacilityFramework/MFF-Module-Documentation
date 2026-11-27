@@ -137,6 +137,11 @@ Setup -> Model (switch permission as before):
   - CCP4/MRC maps.
 - Uploads now accept MTZ files. The model sees their gemmi summary, or a short note if the sandbox is not available.
 
+## OCR
+- Scanned PDFs: a PDF with no text layer is read at upload with ocrmypdf 16.7 (Tesseract 5.5, English), first 30 pages, in the code sandbox (4 CPUs, 4 GB, 2 minutes). The model gets the text marked "read by OCR; may contain errors". If even OCR finds nothing, the upload is refused with a message.
+- Images: every uploaded image is also read with Tesseract in the sandbox. The text is kept only when it has real words. A model that can see images (Qwen, Mistral) reads the image itself; a model that cannot (DeepSeek) gets the OCR text instead of "an image this model cannot see".
+- Installed from Debian on the backend host by `tools/nusbf/ocr-install.sh` (`ocrmypdf`, `tesseract-ocr`, `tesseract-ocr-eng` and dependencies). `ocr-rollback.sh` removes exactly the packages that script added. More languages: one `tesseract-ocr-<lang>` package each.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.

@@ -16,10 +16,11 @@ The AI tab is a chat with the AI model that runs on the facility's own GPU serve
 - Chats are listed by date, with search in titles and text. **…** next to a chat renames or deletes it. Deleted chats can be restored from "Deleted" until they are removed for good (30 days unless changed on Setup).
 
 ## Files
+- Scanned PDFs and photos of documents are read with OCR, so the AI can answer from them.
 - You can attach MTZ, mmCIF and PDB files: the AI reads their space group, cell, resolution and contents. If the facility has switched it on, the AI can also run Python to calculate or make charts, which appear in the chat.
 - Attach, drag in or paste: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), text files (code, CSV, JSON, ...) and PNG, JPEG or WebP images. The original is kept unchanged; click it to download it.
 - A long file is read only as far as it fits; the answer says so. If the tool "Read attached file" is installed, the AI can search the rest.
-- Not supported: scanned PDFs (upload the pages as images), old .doc/.xls files, dates in Excel (they show as day numbers). If the tools are installed, the AI can change an attached Word or Excel file, or make a new file, and gives it to you as a download. The original is never changed: each edit is a new file (version 2, 3, ...). Check the result: a tool that did not work is marked in red above the answer. Formulas are recalculated when the file is opened in Excel; formulas that reach outside the file are refused.
+- Not supported: old .doc/.xls files, dates in Excel (they show as day numbers). If the tools are installed, the AI can change an attached Word or Excel file, or make a new file, and gives it to you as a download. The original is never changed: each edit is a new file (version 2, 3, ...). Check the result: a tool that did not work is marked in red above the answer. Formulas are recalculated when the file is opened in Excel; formulas that reach outside the file are refused.
 
 ## Skills
 Your facility can write skills: short instructions for particular tasks, for example how a buffer recipe should be written here. When your question matches a skill, the AI loads it and follows its steps; the chat shows this as "Used a tool: Load skill". Only the Qwen model uses skills; with another model loaded, the AI answers without them. Skills are written and managed by administrators and developers on Setup -> Skills.
