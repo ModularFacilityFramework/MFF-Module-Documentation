@@ -123,6 +123,20 @@ Setup -> Model (switch permission as before):
   - `ai-mcp-biomcp.service`: BioMCP (biomcp-cli 0.9.3, MIT, GenomOncology; not the unrelated PyPI "biomcp"), at `http://127.0.0.1:8902/mcp`. It has 7 read-only tools over PubMed, Europe PMC, PubTator3, UniProt, InterPro, STRING, PDB, AlphaFold and more. No API keys are set, and each data source keeps its own terms of use.
 - After a deploy, add the three servers on Setup → Tools and install the tools wanted. Not all 46 PDBe API tools need be on: each tool's description takes room in every question.
 
+## Code sandbox and gemmi
+- `run_python` runs a Python 3 program written by the AI.
+  - Packages: numpy, scipy, pandas, matplotlib, biopython, gemmi, rdkit.
+  - Chat files named in the call are at `/work/in/<name>`, read-only.
+  - Files the program saves in `/work/out` (at most 10, 20 MB in all) are given to the person as new chat files, and images are shown in the answer.
+  - stdout and stderr go back to the AI.
+- Isolation: each run is a bubblewrap sandbox (no network; its own process tree; no `/home`, `/etc` or other files; only `/usr` read-only and a fresh work folder) inside a systemd user scope: 2 GB memory with no swap, 64 processes, 2 CPUs, stopped after 60 s, plus prlimit for CPU seconds and a 50 MB file size. At most 2 runs at once; the work folder is deleted afterwards.
+- Runtime: `/usr/local/ai-sandbox` on the backend host (Python venv, root-owned, read-only for the sandbox; package versions in `requirements.lock`). Installed by `tools/nusbf/sandbox-install.sh`, which also enables lingering for the backend's user (`namlb`) so its systemd user manager is always there; rollback: `sandbox-rollback.sh`.
+- `read_structure_file` summarises an attached file with gemmi 0.7.5, in the same sandbox:
+  - MTZ: space group, cell, resolution range, reflections, columns, datasets;
+  - mmCIF/PDB: space group, cell, chains, ligands, waters, entities, and R factors, resolution and method from the header;
+  - CCP4/MRC maps.
+- Uploads now accept MTZ files. The model sees their gemmi summary, or a short note if the sandbox is not available.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
