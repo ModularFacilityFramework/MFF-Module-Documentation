@@ -2,6 +2,8 @@
 
 The AI tab is a chat with the AI model that runs on the facility's own GPU server. The AI runs on the facility's own servers, and your chats stay in your own storage. Only when the facility has switched on web search do the words the AI searches for go to public search engines, and pages it reads are fetched from public sites. When tools from public databases are used (PDBe, BioMCP), the values asked for (for example a PDB id or a gene name) go to those services.
 
+The AI works at one of two levels, shown beside the model name: Standard (everyone), where it only sees your own data through service tools, and Advanced (developers and administrators), which also has direct database and server tools.
+
 ## Before you start
 - You need access to the AI module, and "workspace storage" ticked on your account (Users & Groups). Without it the page says so: your conversations are kept in your own server storage.
 - Administrators cannot read your chats through MFF: titles, texts and files are only in your own storage, not in the database.

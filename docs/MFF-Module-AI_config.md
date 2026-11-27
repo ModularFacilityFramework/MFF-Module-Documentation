@@ -15,7 +15,8 @@ Add these by hand, then restart the backend. There is no page for them.
 | `MODULE_AI_DOCS_DIR` | no | folder with the docs, used when core has none (see "MFF docs tools") |
 | `MODULE_AI_SEARXNG_URL` | no | the facility's SearXNG for `web_search`, e.g. `http://127.0.0.1:8888` |
 | `MODULE_AI_WHISPER_URL` | no | Whisper speech to text on the AI server, e.g. `http://192.168.1.16:8003` |
-| `MODULE_AI_MARIADB_RO_HOST`, `MODULE_AI_MARIADB_RO_PORT`, `MODULE_AI_MARIADB_RO_USER`, `MODULE_AI_MARIADB_RO_PASSWORD` | no | the dedicated read-only MariaDB account for the database tool (developers only) |
+| `MODULE_AI_MARIADB_RO_HOST`, `MODULE_AI_MARIADB_RO_PORT`, `MODULE_AI_MARIADB_RO_USER`, `MODULE_AI_MARIADB_RO_PASSWORD` | no | the dedicated read-only MariaDB account for the database tool (Advanced only) |
+| `MODULE_AI_MSSQL_RO_HOST`, `MODULE_AI_MSSQL_RO_PORT`, `MODULE_AI_MSSQL_RO_USER`, `MODULE_AI_MSSQL_RO_PASSWORD`, `MODULE_AI_MSSQL_RO_DATABASE` | no | the read-only MSSQL account for `db_query_mssql` (Advanced only); host default `127.0.0.1`, port default 1433 |
 | `MODULE_AI_VLLM_API_KEY` | no | only if vLLM was started with a key |
 | `MODULE_AI_CTL_SSH_PORT` | no | default 22 |
 | `MODULE_AI_STORAGE_SUBDIR` | no | folder in each person's workspace, default `module-AI` |
@@ -29,10 +30,19 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
 - Setup: the manifest page `setup` (Setup → Preferences → Access; developer and administrator until granted).
 - On Setup, limits, tools, benchmark questions and the switch list can be changed by administrators and developers only. Switching the model and running benchmarks: those two, plus the roles and people added under Model → "Who may switch the model" (they also need the Setup page).
 
+## Levels and kinds of tool
+- There are two AI levels: **Standard** (everyone) and **Advanced** (core's administrator and developer roles). Core's roles decide (security stays in core). There is no "facility staff" level any more, and the "roles that count as facility staff" setting on Setup → Safety is gone. Older stored values are read safely: "user" counts as Standard; "staff", "developer" and "developer-admin" count as Advanced.
+- Every tool is, in code, either **Direct** (direct access to a database or server: Advanced only, always; Setup refuses a lower level) or **Service** (gives the AI only the asker's own, filtered data, or public data: Standard or Advanced, as set on Setup → Tools).
+- The direct tools are `db_query_mariadb` and `db_query_mssql`. Every other tool is a service tool. The microphone is a chat feature, not given to the AI.
+- Setup → Tools shows a "Direct" or "Service" chip and a "Level" choice (locked to Advanced for direct tools).
+- Skills and docs have the same two levels: user guides are Standard, other docs Advanced.
+- The chat shows "Standard level" or "Advanced level" beside the model name, with an explanation on hover. `GET /ai/config` returns `level`.
+- Safety: the guard, scope check and output scan apply to the Standard level. For the Advanced level the scope check and output scan are off, and the guard is off unless switched on.
+
 ## Setup tabs
 - **Model:** what is loaded, switching (waits for running answers, or stops them), history, the instruction and sampling values per model. A switch takes about 2 to 3 minutes (about 10 minutes the first time a mode starts at a new context length), during which the AI answers nobody.
 - **Benchmark:** the same questions asked to several models; speed, automatic checks, 1-5 scores with model names hidden, CSV. The model loaded before is loaded again at the end. Chat questions wait meanwhile.
-- **Tools:** install, remove, switch on or off. Each installed tool has two limits: For (everyone, facility staff, or developers and administrators; the asker's level from Setup → Safety), and optionally roles (tick core roles to restrict it further). A tool is offered only when both allow the asker. Installing downloads nothing. Available:
+- **Tools:** install, remove, switch on or off. Each installed tool has two limits: its level (Standard or Advanced; see "Levels and kinds of tool" below), and optionally roles (tick core roles to restrict it further). A tool is offered only when both allow the asker. Installing downloads nothing. Available:
   - date and time, calculator, unit converter;
   - read attached file;
   - edit Word, edit Excel, make a file;
@@ -40,13 +50,13 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
   - Slurm (my queue, job state, cluster state);
   - web search, read a web page;
   - run Python (code sandbox), read structure and reflection files (gemmi);
-  - MFF database (read-only, developers only);
+  - MFF databases, MariaDB and MSSQL (read-only, Advanced only);
   - speech to text (the microphone button; never given to the model);
   - plus the tools of every MCP server added in the "MCP servers" section (the facility's: PDBe API, PDBe Search, BioMCP).
 
   Each tool also has a status (tested, done, planned) in "What the AI can do" at the top of the tab. None is installed at first. Only models with the `tools` capability use them.
 - **Skills:** short written instructions the AI loads for one kind of task. Only administrators and developers can change them; others with the Setup page get a read-only view. See `docs/MFF-Module-AI_skills.md`.
-- **Safety:** the safety and scope checks, which roles count as facility staff, extra server names to hide, added delay and the questions and answers stopped. Changes need administrator or developer. See `docs/MFF-Module-AI_safety.md`.
+- **Safety:** the safety and scope checks, extra server names to hide, added delay and the questions and answers stopped. Changes need administrator or developer. See `docs/MFF-Module-AI_safety.md`.
 - **Limits:** every quota and limit. Changes apply within a few seconds.
 - **Usage:** figures only, no names and no text.
 - **Configuration:** which keys are set (never their values).
@@ -79,7 +89,7 @@ Setup -> Model (switch permission as before):
 - Tools: `docs_index` (list of docs with title, area and summary, with an optional filter), `search_docs` (best matching sections, with extracts) and `read_doc` (one section by heading, or the whole doc in 8,000-character parts).
 - They are installed, switched on and given an audience on Setup → Tools like any tool. The AI is told to look in the docs first for questions about MFF, a module, procedures or servers, and to name the doc it used.
 - Where the docs come from: `coreApi.docs` (core 0.1.219: `available`, `list`, `read`) when core has docs. Core has docs only where an MFF-docs checkout sits beside the core checkout; production has none today. Otherwise the folder in `MODULE_AI_DOCS_DIR`. Where neither has docs, the docs tools are not offered, the AI says the docs are not available on this server, and Setup → Tools shows a warning.
-- Who may read which doc (the user's rule, 26/11/2026): `*_user-guide.md` files are for everyone; every other doc (install, admin, security, server, deployment, API) is for facility staff and developers. `INDEX.json` in `MODULE_AI_DOCS_DIR`, if it ever exists, can set an audience per file. The check is in the backend: a doc above the asker's level is never listed, searched or read. A user guide that names another doc only shows its name, never its text.
+- Who may read which doc (the user's rule, 26/11/2026): `*_user-guide.md` files are Standard (everyone); every other doc (install, admin, security, server, deployment, API) is Advanced (administrators and developers). `INDEX.json` in `MODULE_AI_DOCS_DIR`, if it ever exists, can set an audience per file. The check is in the backend: a doc above the asker's level is never listed, searched or read. A user guide that names another doc only shows its name, never its text.
 - Setup → Tools: "MFF docs the AI can read" lists each doc with its area, audience and summary. "Tools used in answers" lists the last 50 tool uses.
 - Data: `ai_tool_use` has one row per tool call (answer_id, user_id, level, tool, target, ok, keyword). `target` is only what the tool was used on, when that is a shared resource: the doc name (`read_doc`), the skill name or skill/file (`load_skill`, `read_skill_file`), the host name of a web page (`web_read`), the MCP server key (MCP tools), or `'mariadb'` (the database tool). It is never the question, the full arguments or the result. The database tool logs its query text separately, in `ai_db_query_log`.
 - Also new on Setup → Tools and Skills: "What the AI can do" lists each tool and skill with a status: tested (tried with real questions on the AI server), done (built), or planned.
@@ -172,16 +182,25 @@ Setup -> Model (switch permission as before):
   - files: `tools/gpu6/whisper_server.py`, `whisper-install.sh`, `whisper-rollback.sh` (`--all` also removes the venv and model).
 - Config key `MODULE_AI_WHISPER_URL` (optional), for example `http://192.168.1.16:8003`.
 
-## Database tool (developers only)
+## Database tools (Advanced only)
+- Rule (the user's decision): the AI may read all databases the read-only accounts can read. The accounts are created at deploy.
+- `db_query_mariadb` and `db_query_mssql` are direct tools: Advanced only, which the module enforces in code, so Setup → Tools refuses a lower level.
+- Every query of both tools is logged in `ai_db_query_log`: answer id, user, database, the query text, rows returned, ms, ok, error.
+
+### MariaDB
 - `db_query_mariadb` lets the AI read MFF's MariaDB through a dedicated read-only account created by the user. Config keys (all optional): `MODULE_AI_MARIADB_RO_HOST` (default `127.0.0.1`), `MODULE_AI_MARIADB_RO_PORT` (default 3306), `MODULE_AI_MARIADB_RO_USER`, `MODULE_AI_MARIADB_RO_PASSWORD`. What the account may read is decided by its grants. The user creates it with `SELECT` only, on the databases and tables chosen, never on tables with password hashes or tokens.
-- Only developers and administrators can use it. The module enforces this in code, so Setup → Tools refuses a wider audience.
 - Each call is limited in the backend:
   - one statement: `SELECT`, `WITH`, `SHOW`, `DESCRIBE` or `EXPLAIN`. Refused: `INTO OUTFILE`/`DUMPFILE`, `LOAD_FILE`, `SLEEP`, `BENCHMARK`, locks, `FOR UPDATE` and `/*!` version comments;
   - run in a read-only transaction that is always rolled back;
   - `max_statement_time` 10 s;
   - at most 200 rows, with long cells shortened.
-- Every query is logged in `ai_db_query_log`: answer id, user, database, the query text, rows returned, ms, ok, error.
-- The MSSQL server on nusbf is not connected yet: it waits for its own read-only account.
+
+### MSSQL
+- Tool: `db_query_mssql`.
+- Statements: one `SELECT` or `WITH … SELECT` only. Refused: `INTO`, `EXEC`, `sp_` and `xp_` procedures, `OPENROWSET`, `OPENQUERY`, `WAITFOR`, `BULK`, DDL and DML, and `;`.
+- Limits: run in a transaction that is rolled back, `LOCK_TIMEOUT` 5 s, query timeout 10 s, at most 200 rows.
+- Config keys: `MODULE_AI_MSSQL_RO_HOST` (default `127.0.0.1`), `MODULE_AI_MSSQL_RO_PORT` (default 1433), `MODULE_AI_MSSQL_RO_USER`, `MODULE_AI_MSSQL_RO_PASSWORD`, `MODULE_AI_MSSQL_RO_DATABASE`.
+- It runs through `backend/lib/mssql_query.py` with pymssql 2.4.6 (LGPL-2.1) in `/usr/local/ai-dbtools` on the backend host (`tools/nusbf/dbtools-install.sh`, with a rollback), because the Node driver now needs Node 22.
 
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
@@ -190,10 +209,10 @@ Setup -> Model (switch permission as before):
   - `ai_skill_files`: the reference files of each skill.
   - `ai_skill_log`: one row per skill load (answer id, user, skill, file, model keyword; never any question or answer text).
   - `ai_skill_audit`: who created, changed, switched on or off, or deleted which skill.
-  - `ai_skills.audience` (new column): who the skill is for (everyone, facility staff or developers).
+  - `ai_skills.audience` (new column): the skill's level, Standard or Advanced (older stored values are still read, see "Levels and kinds of tool").
   - `ai_safety_log`: one row per safety check; never any question or answer text.
   - `ai_tool_use`: one row per tool call (answer id, user, level, tool, target, ok, model keyword); `target` is only what the tool was used on, when that is a shared resource: the doc name (`read_doc`), the skill name or skill/file (`load_skill`, `read_skill_file`), the host name of a web page (`web_read`), the MCP server key (MCP tools), or `'mariadb'` (the database tool). It is never the question, the full arguments or the result. The database tool logs its query text separately, in `ai_db_query_log`.
   - `ai_transcribe_log`: one row per recording (user, seconds of audio, ms, ok); no text.
-  - `ai_db_query_log`: every query of the database tool: answer id, user, database, the query text, rows returned, ms, ok, error. It holds the SQL written by the AI for developers, not the chat.
+  - `ai_db_query_log`: every query of both database tools: answer id, user, database, the query text, rows returned, ms, ok, error. It holds the SQL written by the AI for developers, not the chat.
 - Hourly cleanup (`actsAsUsers` in the manifest): abandoned uploads after a day, deleted chats after the limit "Keep deleted chats". Files of people deleted from MFF are not removed.
 - If the backend is restarted while an answer is being written, that answer is lost; the page offers "Answer it now".

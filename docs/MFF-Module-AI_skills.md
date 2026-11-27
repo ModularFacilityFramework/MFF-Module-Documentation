@@ -16,10 +16,10 @@ A skill is a short set of written instructions for one kind of task, for example
 - Steps: required. The whole SKILL.md is at most 8,000 characters.
 - Reference files (optional): at most 10, plain text, at most 50,000 characters each. A skill and its files together are at most 250,000 characters. File names use letters, digits, ".", "-" and "_".
 - Module tag (optional): a label such as slurm or bookings, used to filter the list.
-- For: everyone, facility staff, or developers (default everyone).
+- Level: Standard (everyone) or Advanced (administrators and developers); default Standard. See `docs/MFF-Module-AI_safety.md`, "Who is who".
 
 ## How the AI uses skills
-- Every answer from a model that can use tools gets, in its system prompt, the name and description of each skill that is on and meant for the asker's level (a staff skill is offered to staff and developers, a developer skill to developers only). At most 40 skills are listed (by name); each description is cut to 300 characters there.
+- Every answer from a model that can use tools gets, in its system prompt, the name and description of each skill that is on and meant for the asker's level (an Advanced skill is offered at the Advanced level only). At most 40 skills are listed (by name); each description is cut to 300 characters there.
 - When a question matches a description, the AI calls the tool load_skill(name), gets the steps, and follows them. If the steps say so, it reads a reference file with read_skill_file(skill, file, start).
 - These two tools come with skills. They need no install on the Tools tab, and they work even if no other tool is installed.
 - Models that cannot use tools (Mistral, DeepSeek) never see skills and answer as before.
