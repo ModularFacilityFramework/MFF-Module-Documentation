@@ -103,7 +103,8 @@ Setup -> Model (switch permission as before):
   - normal users get only their own jobs (by Slurm user name = MFF user name) and anonymous totals;
   - staff (developer, administrator, facility_manager, facility_staff) may see all jobs and nodes;
   - another person's job answers "There is no job <id> that you can see", the same as a missing one.
-- At the Standard level the AI sends `scope=own` on `/external/queue`, `/external/job-state/<id>` and `/external/cluster-state`, so the slurm module itself answers with the person's own jobs only and no per-node detail. `scope=own` on `job-state` and `cluster-state` needs a slurm version that supports it (requested from mff-slurm 27/11/2026); until then the AI's own narrowing above applies.
+- At the Standard level the AI sends `scope=own` on `/external/queue`, `/external/job-state/<id>` and `/external/cluster-state`, so the slurm module itself answers with the person's own jobs only and no per-node detail. `scope=own` on `job-state` and `cluster-state` needs slurm 0.1.49 or newer; until then the AI's own narrowing above applies.
+- Older slurm ignores `scope=own` (ai 0.1.33). So for anyone the slurm module counts as staff (`facility_manager`, `facility_staff`), single-job lookups at the Standard level are refused unless core reports slurm 0.1.49 or newer (`getModulesForUser`). Jobs sent to Slurm through an MFF module run under MFF's own account, so they are not listed as the person's own; the AI says so rather than calling them non-existent.
 - The AI never widens this, and answers only from the asker's own result (nothing is cached).
 - Errors the AI explains:
   - no Slurm access (ask facility staff);
