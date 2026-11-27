@@ -32,7 +32,7 @@ items. Access control is at the application level only: Science sets no file per
 ## Request a project
 - Science has a third tab, "Project requests". A person who cannot create fills in: title, a short text (required, at most 2000 characters), optionally a group and a PI (a user whose job position is "PI"). One request can wait at a time; the person can cancel it. A notice on the other Science tabs says they have no project, or that their request is waiting.
 - Approvers: administrators, developers, and whoever is granted Science's page "Approve project requests" (key project_approvals; Setup -> Preferences -> Access). They see the requests on the same tab, with a count on its title, and approve or decline with an optional note. Approving creates the project with the requester as owner, with the request's title and text. An approver who is not an administrator or developer cannot decide their own request. A module cannot read or decide requests.
-- The requester sees the decision in Science (a notice, and "new" in their list) until they open the tab. There is no notification outside Science: core gives modules no way to send one yet.
+- The requester sees the decision in Science (a notice, and "new" in their list) until they open the tab. On core 0.1.224 or later Science also notifies them with coreApi.notify (title, the decision, the project number or the note, link /dashboard?tab=science). Approvers are not notified of a new request: they see the count in Science.
 - A person needs access to the Science module to use this tab.
 
 ## Who needs access to the Science module (admin setup)
@@ -101,6 +101,7 @@ MODULE_SCIENCE_DATA_BASE_DIR in core's .env: an absolute path; enables folder_pa
   with no project, and creating is then refused with 403 (see "A project before project work"). Core serves it to every signed-in user, so a project member needs no Science grant; Science
   applies its own access rules in each function. The Science tab and its pages (including sharing) stay governed
   by module access.
-- Besides list, get, create and canCreate, the server provider offers functions that core v0.1.223 does not call yet; their signatures are Science's proposal and not yet agreed with core: items(user, projectId, {moduleId}), status(user), assignment.options(approver, targetUserId), assignment.apply(approver, targetUserId, {create, grants}) (developers and administrators only; works for a pending registration), requests.create/mine/cancel(user, ...).
+- For core 0.1.224 or later the server provider also passes is_template and item_counts on each project and offers: items(user, projectId, {moduleId}) (null when not readable), status(user) -> {has_project, can_request, is_approver, pending_request: {id, title, created_at} | null, request_link}, assignment.options(approver, targetUserId) and assignment.apply(approver, targetUserId, {create, grants}) (developers and administrators only; all or nothing), requests.create(user, {title, description, group_id, pi_user_id}), requests.mine(user), requests.cancel(user, id). The signatures are those of core's projects contract. is_approver uses coreApi.hasPage(user, 'project_approvals') (administrators and developers on an older core).
+- scope "shared" also lists the Project template for anyone who reads it without owning it.
 - Browser provider (fallback, only used when the server has none): frontend/projectsProvider.js, same Project
   shape, over the /external routes. With only this, users without access to Science cannot use the picker.
