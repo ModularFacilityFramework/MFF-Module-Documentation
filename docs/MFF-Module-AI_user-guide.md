@@ -7,6 +7,7 @@ The AI tab is a chat with the AI model that runs on the facility's own GPU serve
 - Administrators cannot read your chats through MFF: titles, texts and files are only in your own storage, not in the database.
 
 ## Chatting
+- The AI knows today's date and time. If the facility has switched it on, it can also search the web and read public web pages; it then names the pages it used. Only your search words leave the facility.
 - **Enter** sends, **Shift+Enter** makes a new line. **Stop** ends an answer; what was written so far is kept.
 - **Think first** (Qwen): slower, better for hard questions. The thinking is shown separately; click it to read it.
 - Qwen accepts conversations of up to 262,144 tokens (about 196,000 words). Administrators can load Qwen in a smaller FP8 form; it answers almost twice as fast, and more long conversations fit at the same time.
