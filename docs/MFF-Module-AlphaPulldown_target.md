@@ -2,7 +2,7 @@
 
 Step 1 of the new workflow (Target -> Baits -> pairing -> prediction -> ranked summary). The Target tab defines the protein or complex a target is about. It is saved as a draft at any time (valid or not) and confirmed explicitly. The Baits tab exists but is locked until the selected target is confirmed. Baits, pairing and prediction are not built yet.
 
-Targets belong to a Science project, picked above the tabs with core's ProjectPicker; a project holds one or many targets. A selector under the picker switches target; "+ New target" starts a blank draft; "Delete target" removes the target, its chains and events, its line on the project page and, if the caller loaded the model, its model file. Who may see a target is who may see its project (core's `coreApi.projects`, asked on every request): read access reads; write access is needed to change anything; an archived project is read-only; no access answers `404`; Science unavailable answers `503`. Anyone with write access can change any target of the project (the target shows who made it). Model files are written to the workspace of whoever loads them.
+Targets belong to a Science project, the open tab of core's ProjectTabs; a project holds one or many targets. A target selector under the project tabs switches target; "+ New target" starts a blank draft; "Delete target" removes the target, its chains and events, its line on the project page and, if the caller loaded the model, its model file. Who may see a target is who may see its project (core's `coreApi.projects`, asked on every request): read access reads; write access is needed to change anything; an archived project is read-only; no access answers `404`; Science unavailable answers `503`. Anyone with write access can change any target of the project (the target shows who made it). Model files are written to the workspace of whoever loads them.
 
 Words: target = the protein or complex of interest (one or more chains). Genome = the UniProt proteome the target comes from (the baits will later be picked from it).
 
@@ -49,7 +49,6 @@ In `/projects/:id/...`, `:id` is the Science project id.
 - `DELETE /targets/:tid/model`
 - `GET /uniprot/entry/:accession`
 - `GET /target/genomes?q=`
-- Staff only: `GET /targets` (rows now carry `targetId`)
 
 Access follows the target's Science project: see "Who sees it".
 
