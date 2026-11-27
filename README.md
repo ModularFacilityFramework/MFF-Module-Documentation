@@ -86,6 +86,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 | [`MFF-Module-CryoEM_projects.md`](docs/MFF-Module-CryoEM_projects.md) | CryoEM module: projects |
 | [`MFF-Module-Desk_remote-desktop.md`](docs/MFF-Module-Desk_remote-desktop.md) | Desk module — Remote Desktop |
 | [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
+| [`MFF-Module-FLEET_overview.md`](docs/MFF-Module-FLEET_overview.md) | Fleet module: overview, access, configuration and machine setup |
 | [`MFF-Module-Finance_overview.md`](docs/MFF-Module-Finance_overview.md) | Finance module (`finance`) |
 | [`MFF-Module-Finance_api-and-config.md`](docs/MFF-Module-Finance_api-and-config.md) | Finance module — API, files and configuration |
 | [`MFF-Module-Pandda2Inspect_config.md`](docs/MFF-Module-Pandda2Inspect_config.md) | pandda2inspect module configuration |
