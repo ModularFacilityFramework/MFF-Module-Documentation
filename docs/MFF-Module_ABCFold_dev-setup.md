@@ -22,9 +22,10 @@ One job per user is with Slurm at a time; the rest are queued. With core v0.1.19
 
 ## Projects
 
-Status: the code is on `origin/main` (a133313), not yet deployed or tested in a running core.
+Status: the code is on `origin/main`. It was tested on 27/11/2026 in an isolated dev core (core v0.1.223) with real Science and a fake SLURM; it is not yet deployed. Losing project access and a second user were not tested there.
 
 - Every new or resubmitted ABCFold job runs in a Science project, chosen with core's `ProjectPicker`. Write access is required and the project must not be archived. Access is checked again when a queued job is sent. The manifest has `"requires": ["slurm","science"]`.
+- After a submit, Results shows the new job even if a saved project filter was on another project (a7db341).
 - The Results list can be filtered by project. Jobs stay private to their owner. A job in a project its owner can no longer read is not shown. If core cannot decide access, the list answers `503`.
 - Each job is a Science project item: `item_type` `"job"`, title `"J<n> <name>"`, a status, and the link `/dashboard?tab=abcfold`. The item is updated on status changes and removed on delete or move. If Science cannot be reached, this is retried about every 15 minutes and never blocks a job.
 - Running jobs' statuses are re-read about every 5 minutes with no browser open.
