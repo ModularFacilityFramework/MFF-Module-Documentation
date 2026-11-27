@@ -273,7 +273,8 @@ You get core's raw connection pool because some things (like the two functions a
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
     usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
     registerProjectsProvider,                  // (provider) => void - owner module only (Science); fallback when the server has no provider, see "Projects"
-    ui: { ProjectPicker, ShareDialog, UserPicker, GroupPicker, JobPositionPicker },  // shared components - see "Projects" and "People, group and job position pickers"
+    ui: { ProjectPicker, ShareDialog, UserPicker, GroupPicker, JobPositionPicker, SortHeader },  // shared components - see "Projects", "People, group and job position pickers" and "Sortable tables"
+    useSortedRows, sortRows, naturalCompare,   // natural table sorting - see "Sortable tables"
     getAllRoles,                               // () => Promise<string[]>
     getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
     DrillDownPie, fetchSlices, normalizeSlices // the shared pie chart - see "Charts: the shared drill-down pie"
@@ -457,6 +458,72 @@ coreApi.clearPageState('mymodule.jobs.draft');
 **Keys:** named `moduleId.page.what[:id]`, using the characters `A-Za-z0-9 _ . : -`, at most 120. A value is JSON, at most 64 KB. At most 1000 keys per user. Never store secrets.
 
 **Rule:** every page and tab of a module persists the selected tab or sub-tab; the selected year, project, target, job or item; filters, search, sort and columns; open and collapsed sections; and unsaved drafts (call `reset()` after saving a draft). A module must use `coreApi.usePageState` for this and test leave, return and reload. The HTTP routes behind it are in `docs/MFF-Core_api.md` (`/page-state`).
+
+### Sortable tables
+
+Core v0.1.223. Frontend only; it adds to `coreApi` and changes nothing else.
+
+**Rule (the user's request; it applies to every table in core and in every module):** each column header with data has **two** buttons, ascending and descending. Sorting is natural. The chosen column and direction persist per user.
+
+In `coreApi`:
+
+| Name | What it is |
+|---|---|
+| `useSortedRows(rows, columns, { rememberAs, defaultSort })` | A React hook returning `{ rows, sort, columns, toggle(column, direction) }`. Call it at the top level of the component, before any early return. |
+| `ui.SortHeader` | `<SortHeader table={table} column="name" label="Name">Name</SortHeader>` renders the `<th>`. |
+| `sortRows(rows, columns, { column, direction })` | Returns a **new** array; the input is unchanged. With no sort or an unknown column, the order is as given. |
+| `naturalCompare(a, b, { direction, type })` | For `Array.prototype.sort`. `direction` is `'asc'` or `'desc'`; `type` is `'auto'`, `'text'`, `'number'` or `'date'`. |
+
+`SortHeader` props:
+- `table`: the result of `useSortedRows`.
+- `column`: a key in `columns`.
+- `label`: the name read by screen readers. It is needed when the content is not plain text; otherwise the column key is used.
+- Every other prop (`style`, `className`, `colSpan`, ...) goes to the `<th>`.
+
+It sets `aria-sort`, and the buttons are labelled "Sort by <name>, ascending" and "Sort by <name>, descending". A column with no definition (for example Actions) renders as a plain `<th>`.
+
+Example:
+
+```js
+const { useSortedRows } = coreApi;
+const { SortHeader } = coreApi.ui;
+
+const table = useSortedRows(items, {
+  name: (i) => i.name,
+  version: { value: (i) => i.version, type: 'text' },
+  size: { value: (i) => i.bytes, type: 'number' },
+  added: { value: (i) => i.created_at, type: 'date' },
+}, { rememberAs: 'mymodule.items' });
+
+// header: <SortHeader table={table} column="name">Name</SortHeader>
+// body:   table.rows.map(...)
+```
+
+**Column definitions.** A column is one of:
+- a function `(row) => value`;
+- `{ value, type }`;
+- `{}` or `true`, meaning `row[columnName]`.
+
+Give **raw** values (a timestamp, a byte count), not the formatted cell text. Use type `'text'` for versions and codes: as text `'1.10'` comes after `'1.9'`, but as a number it comes before.
+
+**Sorting rules:**
+- Numbers sort by value. This covers decimals, negatives, thousands commas (`1,200`), a leading `£`, `€` or `$`, and a trailing `%`. Exponent form such as `1e3` counts as a number only with type `'number'`, so a code like `2E10` stays text.
+- Text ignores case and accents, and numbers inside text count by value (`item2` before `item10`).
+- Dates sort by date: `Date` objects, ISO text with or without a time zone, and day-first `dd/mm/yyyy` with an optional time. With type `'date'`, a number is a timestamp.
+- Empty values come **last** in both directions: `null`, `undefined`, `''`, only spaces, `NaN`, an invalid `Date` and an empty list.
+- Equal rows keep the order they came in.
+- In a mixed column, ascending order is numbers, then dates, then text.
+- A list value sorts by its items joined with `', '`. Booleans sort as 0 and 1.
+
+**Persistence.** The sort is saved per user through page state under `<rememberAs>.sort`, as `{ column, direction }`. `rememberAs` must be unique per table (`moduleId.page.table`). Without `rememberAs`, sorting works but is not saved, which is not acceptable under the persistence rule (see "`usePageState`: page state persistence").
+- `defaultSort` is `{ column, direction }`, or `null` for the order the rows come in.
+- Clicking the active button again returns to the default.
+- If a saved column no longer exists or is hidden, the table falls back to the default without an error. The saved choice is kept for when the column returns.
+
+**Notes:**
+- For a tree, sort all rows once, then pick each parent's children from `table.rows`, so that siblings are sorted among themselves.
+- These tools sort in the browser. A table paged by the server must be sorted by the server over the whole set (core has no such table).
+- `naturalCompare` and `sortRows` can be used for lists that are not `<table>`s.
 
 ## Database credentials also go through `getModuleConfig()` now
 
