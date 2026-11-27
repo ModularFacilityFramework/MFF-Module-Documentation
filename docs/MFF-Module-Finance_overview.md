@@ -115,6 +115,10 @@ The 2025-2026 table was loaded once by a throw-away script kept outside the repo
 - Left blank: Date Goods/Services Required, Account to be Charged and Cost Element. Everything else is the template's.
 - The cells are found by their printed labels, so a re-saved copy of the form can replace the template file.
 
+## Table sorting
+
+Sorting (every table): each column with data has ascending and descending buttons, using core's `coreApi.useSortedRows` and `coreApi.ui.SortHeader` (core 0.1.223+; on an older core the tables show rows as they come, with plain headings). Natural order, empty values last, saved per user per table (`finance.<page>.<table>.sort`; each Usage group table has its own). Clicking the active button again returns to the default order. People tables in Recovery and Grants default to the shown First Last name. Total lines stay at the bottom. Sorting changes the screen only, not saved data or the IPR. Costing Model > Services: Up/Down are off while a column sort is on. Quote line editor: the order holds still while a line is typed in.
+
 ## Page state
 
 Every tab keeps its state when the user leaves and comes back, reloads, or logs out. This is done by one hook, `usePageState(key, default, validate)`, in `frontend/persist.js` (keys are named `finance.<page>.<what>`).
