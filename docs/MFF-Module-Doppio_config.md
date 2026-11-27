@@ -40,6 +40,17 @@ running."`, and writes `host`/`port` to `workDir/doppio-status.json` (or a
 `.error` sibling on failure) once ready. `backend/routes/sessionRoutes.js`
 polls for that file to learn when a session is actually reachable.
 
+## Projects (v0.1.50)
+
+Every Doppio session runs in a Science project (`docs/MFF-Module-Science_projects.md`). The manifest has `"requires": ["slurm", "science"]` and `"actsAsUsers": true`. Needs a core with `coreApi.projects` and `coreApi.ui.ProjectPicker`, and Science with its `/external/template` routes.
+
+- The Doppio tab shows core's ProjectPicker (write access required; choice remembered per user, page-state key `doppio.sessions.project`) and the caller's latest session in that project.
+- Launching is refused without a project, with read-only or no access, for an archived project, and for "Project template".
+- Each session is a project item: `item_type` `doppio_session`, `item_id` the session id, status the session state, link `/dashboard?tab=doppio`. It is sent again when a request sees a changed state; a `403` or `409` is final for that state, other failures are retried on a later request and shown as a warning. A state change nobody views is not sent.
+- A proxy ticket needs write access to the session's project (adopted template sessions excepted). A ticket already in use keeps working while it stays active.
+- Sessions created before this change are moved into Science's "Project template" by a background job (first run 15 s after start, delay doubling up to 1 h, until none are left), acting as each session's owner; owners core refuses (e.g. inactive or without Doppio access) stay unadopted and are logged. A still-active one is opened from a notice on the Doppio tab.
+- New columns on `doppio_sessions`: `project_id`, `project_item_state`, `project_is_template` (added by core's schema diffing).
+
 ## Config keys
 
 | Variable | Default | Purpose |
@@ -101,24 +112,30 @@ polls for that file to learn when a session is actually reachable.
 ### `POST /sessions`
 
 Any authenticated user with an active workspace (`coreApi.getUserWorkspacePath`).
-Body: `{ jobName? }`. Creates the session's `work_dir`, writes `submit.sh`,
+Body: `{ projectId, jobName? }`. Creates the session's `work_dir`, writes `submit.sh`,
 submits it via `coreApi.callModule(..., 'slurm', 'POST', '/external/jobs',
-...)`. Returns the new session (never `token`).
+...)`. Returns the new session (never `token`). Refused with `400` (no
+project), `403` (read-only), `404` (unreadable) or `409` (archived, or the
+template). The response may carry `projectWarning`.
 
 ### `GET /sessions`
 
-The caller's own sessions, newest first.
+The caller's own sessions, newest first. Optional `?projectId=` (needs read
+access on that project, else `404`).
 
 ### `GET /sessions/:id`
 
 Owner-only. Rate-limit-polls SLURM job state and the `workDir` status file,
 advancing `appState` through `submitting → queued → starting → running →
 ended`/`failed`. Never returns `token`, the proxy ticket, or the raw
-`host`/`port`.
+`host`/`port`. It also updates the project item; the response has
+`projectId`, `inTemplate` and `projectWarning`.
 
 ### `POST /sessions/:id/proxy-ticket`
 
-Owner-only, session must be `running`. Returns `{ ticket, expiresAt }`.
+Owner-only, session must be `running`. Returns `{ ticket, expiresAt }`. Needs
+write access on the session's project (`403`), except for adopted template
+sessions.
 
 ### `ALL /sessions/:id/proxy/*`
 
