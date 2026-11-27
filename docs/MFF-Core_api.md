@@ -154,6 +154,12 @@ Pending registrations that match a record:
 - Activating or approving a registration whose requested username or email a record still holds returns `409 { mergeRequired: true }`. This also applies to `PUT /users/:id` setting it to `active` or to `no_login`. If both the username and the email are free again, they are restored and the request goes ahead.
 - Rejecting (or deactivating) such a pending registration removes only the request: `{ success, removed: true, message: "Registration rejected. The existing record is unchanged." }`, and it is logged.
 
+### Projects at registration approval
+Core v0.1.227. Administrators and developers.
+
+- `GET /users/:id/project-options` — `{ success, available, projects: [{ id, number, title, owner_label, target_access }] }`.
+- `POST /users/:id/project-assignment` — body `{ create: { title, description } | null, grants: [{ project_id, access: 'read'|'write' }] }`; returns `{ success, created, granted }`. `409` until the account is approved; `404` when the provider cannot do it.
+
 ## Groups (`/groups`)
 
 - `GET /groups` — Protected (any authenticated user). Each group has `member_count` and `pis: [{ user_id, is_primary, username, first_name, last_name, name, email }]`, primary PI first, then by first and last name (not by user id).
@@ -308,6 +314,13 @@ Core v0.1.218. Served from the projects provider registered by the module that o
 - `GET /projects?scope=mine|shared|all&search=&archived=1` — `Project[]`. Archived projects are left out unless `archived=1`. `scope=all` is for administrators and developers only, else `403`; any other scope is `400`; no provider is `404`.
 - `GET /projects/:id` — `Project`; `404` if absent or not readable.
 - `POST /projects` — body `{ title, description }`, `201` with the `Project`. `400` with no title, `403` if the user cannot create, `404` with no provider; read-only view-as sessions get `403`.
+
+Added in core v0.1.227 (all need a login, not access to the owner module):
+- `GET /projects/status` — `{ available, module_id, can_create, has_writable_project (true|false|null), can_request, is_approver, pending_request, request_link, can_open_owner }`.
+- `GET /projects/settings` — `{ members_may_create }`. `PUT /projects/settings` — administrators and developers; body `{ members_may_create: true|false }`, else `400`/`403`.
+- `GET /projects/requests` — your own requests. `POST /projects/requests` — `{ title, description, group_id?, pi_user_id? }`, `201`; `400` with no title. `POST /projects/requests/:id/cancel` — `{ cancelled: true }`. `404` when the provider has no requests.
+- `GET /projects/:id/items?module_id=` — items; `404` if the project is not readable or items are not available.
+- `POST /projects` now answers `403` to a person with no project (see the rules in `docs/MFF-Core_module-core-api.md`, "Projects").
 
 A provider failure answers `500` "The projects request failed".
 

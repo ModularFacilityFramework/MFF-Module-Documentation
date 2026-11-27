@@ -24,7 +24,9 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     getUserWorkspacePathForUserId,        // (userId) => Promise<{active, path, reason}> - background identity, see below
     registerUpgradeHandler,               // (path, handler, { page?, identify? }) - WebSocket upgrade, see "WebSocket: `registerUpgradeHandler`"
     registerProjectsProvider,             // (provider) => void - owner module only, see "Projects"
-    projects: { available, access, get, list },  // project membership checks, every module - see "Projects"
+    projects: { available, access, get, list, status, hasWritableProject, mayCreate },  // every module - see "Projects"
+    notify,                               // (userIdOrIds, { title, message, link }) - tell people something happened, see "Projects"
+    hasPage, listPageUsers,               // the module's own declared pages: who may open them, see "Projects"
     getModuleConfig,                      // () => Record<string, string> - see below
     docs,                                 // { available, list, read } - read-only shared documentation, see "Documentation"
     toChartSlices, chartResponse,         // build the data a DrillDownPie loads - see "Charts: the shared drill-down pie"
@@ -273,7 +275,8 @@ You get core's raw connection pool because some things (like the two functions a
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
     usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
     registerProjectsProvider,                  // (provider) => void - owner module only (Science); fallback when the server has no provider, see "Projects"
-    ui: { ProjectPicker, ShareDialog, UserPicker, GroupPicker, JobPositionPicker, SortHeader },  // shared components - see "Projects", "People, group and job position pickers" and "Sortable tables"
+    useProjectStatus, notifyProjectsChanged,   // does this person have a project; tell core's project components something changed - see "Projects"
+    ui: { ProjectTabs, ProjectTask, ProjectLockedBanner, ProjectPicker, ShareDialog, UserPicker, GroupPicker, JobPositionPicker, SortHeader },  // shared components - see "Projects", "People, group and job position pickers" and "Sortable tables"
     useSortedRows, sortRows, naturalCompare,   // natural table sorting - see "Sortable tables"
     getAllRoles,                               // () => Promise<string[]>
     getAllUsers,                               // (params) => Promise<{success, items, total, page, pages, limit}>
@@ -383,22 +386,53 @@ const { items, total } = await coreApi.getAllUsers({ search: 'smith', sortBy: 'u
 ```
 Thin, full pass-through to `GET /users` — same admin-only role gate, same pagination/search/sort query params that endpoint already supports (`page`, `limit`, `sortBy`, `sortDir`, `search`). It is **not** a new capability — a module could already reach this exact endpoint via `coreApi.apiGet('/users', { params })`; this is purely a named, documented shortcut. It inherits whatever the *current* logged-in user is actually allowed to see — a non-administrator calling this gets the same 403 core's own UI would get.
 
-### Projects: `registerProjectsProvider`, `ProjectPicker`, `ShareDialog`
+### Projects: `ProjectTabs`, `registerProjectsProvider`, `ProjectPicker`, `ShareDialog`
 
 Core v0.1.211. One module owns projects (Science); the others never import it.
 
 **Why (core v0.1.218).** The picker runs in the browser. A provider that calls the owner module's routes gets `404` for any user without access to that module (a module with no grants is developer/administrator only). So the owner registers a **server** provider, and core serves it to every signed-in user, outside the module access gate. Project membership, decided by the provider, is the control. Routes: `docs/MFF-Core_api.md`, "Projects".
 
-A `Project` is `{ id, number, title, owner_label, access, can_write, can_manage, archived, item_count, updated_at }`.
+**Core's rules (v0.1.227), the same in every module.** "Having a project" = write access to at least one project that is not archived and is not the Project template. Without one, project tasks are locked and the person requests a project. Administrators and developers may always create projects. Anyone else only when they already have one, AND the facility setting "People who already have a project may create more projects" is on (Users & Groups; default on), AND the provider agrees. There is no limit on the number of projects. `POST /api/projects` answers `403` otherwise. When core cannot tell whether someone has a project (provider failure), nothing is locked.
+
+**Every project module (v0.1.227):** put `coreApi.ui.ProjectTabs` at the top of its page, show the content of `selection.projectId`, create new items in that project only when `selection.canCreate` (wrap the forms in `coreApi.ui.ProjectTask`), and keep its own server checks. The lock in the browser is a screen aid only: the module's server must check `coreApi.projects`.
+
+**`<coreApi.ui.ProjectTabs rememberAs moduleId value onChange children />`.** One tab per project the person can see: "Project template" first, then their own and shared ones, read-only ones marked; "+ New project" when they may create (the new tab is selected); "All projects" (search; archived projects; administrators and developers see every project). Many tabs scroll sideways.
+- `rememberAs` (required): page-state key `moduleId.page`. The chosen tab is saved per user, only when the person chooses one.
+- `moduleId`: shows `item_counts[moduleId]` on each tab.
+- `value`: a project id makes it controlled. `null` and `undefined` both mean ProjectTabs chooses and remembers (unlike ProjectPicker).
+- `onChange(projectId, selection)`: only when loaded, when the shown project or what may be done with it changes; with `value`, also when another tab is clicked.
+- `children`: `(selection) => nodes`, or nodes.
+- `selection = { ready, available, error, projectId, project, isTemplate, isArchived, canWrite, canCreate, reason, hasWritableProject, locked, refresh() }`. `ready` is false while loading or when loading failed (`error` set, "Try again" shown): show nothing project-specific. `projectId` null with `ready` true: there is no project, or none is provided (`available` false: the tabs say "Projects are not available here (the module that provides them is not installed)." and the children still render). `canCreate` is true only with write access, not the template, not archived, not locked.
+- A remembered project that is gone or unreadable falls back to another tab without an error and is not overwritten; a failed request keeps the choice.
+- Archived projects have no tab; opening one from "All projects" shows a tab for it, read-only for new items.
+
+**`<coreApi.ui.ProjectTask selection need="selected"|"any">`** greys and disables the form controls inside and shows the reason ("Loading projects...", "You need a project first", "Projects are not available here", "Choose a project", "Project template only holds older work - choose another project", "This project is archived", "Read-only for you: you need write access"). `need="any"`: the task needs a project, not the selected one. Links and clickable non-form elements must check `selection.canCreate` themselves.
+
+**`<coreApi.ui.ProjectLockedBanner />`** (ProjectTabs already includes it) shows only when the person has no project: "You need a project first", any pending request, and "Request a project" / "View your request". The button opens the owner module's page when the person may open that module, else core's own request form; where requests are not possible it says to ask an administrator or a project owner.
+
+**`coreApi.useProjectStatus()`** returns `{ loading, error, available, moduleId, hasWritableProject, locked, canCreateProject, canRequest, pendingRequest, isApprover, requestLink, canOpenOwner, refresh }`. **`coreApi.notifyProjectsChanged()`**: call after anything that changes who sees or writes which project.
+
+**Registration approval.** When an administrator or developer approves a registration (also "Approve & merge"), the same step offers, always optional: a new project for the person (they own it) and/or read or write access to existing projects. The account is approved first; a failed project step can be retried. With "Approve & merge" the project list is asked for the registration's id, because a no-login record cannot have projects, and the choice is applied to the merged account.
+
+**Backend, every module: notifications and page checks.**
+- `coreApi.notify(userIdOrIds, { title, message, link })` returns `{ ok, notified, emailed, error }`; never throws. E-mail plus a `core_notifications` row, to active accounts that can log in only; at most 200 people; `link` is a path inside the app starting with "/".
+- `coreApi.hasPage(userOrId, pageKey)` returns a boolean and `coreApi.listPageUsers(pageKey)` returns `[{ id, username, first_name, last_name, email }]`, for the module's own declared pages only; false / [] on anything else.
+
+A `Project` is `{ id, number, title, owner_label, access, can_write, can_manage, archived, is_template, item_count, item_counts, updated_at }`. (`item_counts` is `{ "<moduleid>": n }`.)
 
 **Backend, owner module only: `coreApi.registerProjectsProvider(provider)`.**
 - `list(user, { scope: 'mine' | 'shared' | 'all', search, includeArchived })` returns `Project[]` — only what this user may read.
 - `get(user, id)` returns a `Project`, or `null` when it is absent **or** not readable (a thrown error with status 403 or 404 counts as `null`).
 - `create(user, { title, description })`, optional; returns the new `Project` (flat). A `create()` error with a 4xx status keeps its message.
 - `canCreate(user)`, optional; returns a boolean (default `true` when `create` exists).
+- `status(user)`, optional (v0.1.227); returns `{ has_project?, can_request?, is_approver?, pending_request?: { id, title, created_at }, request_link? }`. Without `has_project` core works it out from `list`.
+- `requests: { create(user, { title, description, group_id, pi_user_id }), mine(user), cancel(user, id) }`, optional. A request is `{ id, title, description, group_id, group_label, pi_user_id, pi_label, status, decision_note, project_id, created_at, decided_at }`. The owner module keeps the requests and the approval list.
+- `items(user, projectId, { moduleId })`, optional; returns `Item[]` or `null` (not readable). An `Item` is `{ id, module_id, item_type, item_id, title, status, created_by, created_by_label, created_at, updated_at, link }`.
+- `assignment: { options(approver, targetUserId), apply(approver, targetUserId, { create, grants }) }`, optional. `options` returns `{ projects: [{ id, number, title, owner_label, target_access: 'none'|'read'|'write'|'owner' }] }`. `apply` takes `create: { title, description } | null` and `grants: [{ project_id, access: 'read'|'write' }]`, and returns `{ created: Project | null, granted: n }`.
+- The provider may call `coreApi.projects.*` from inside its own functions (for example `mayCreate` inside `status`): core then answers without calling that same provider function again, so they cannot loop.
 - `user` is `{ id, username, email, group_id, roles: [names] }`.
 
-Only one module may register: a second one's `register()` throws and that module is skipped. A skipped module's provider is removed. Core passes on only `id`, `number`, `title`, `owner_label`, `access` (`'read'`, `'write'`, `'owner'` or `'admin'`), `can_write`, `can_manage`, `archived`, `item_count` and `updated_at`. `can_write`, `can_manage` and `archived` must be `true` or `1`. Entries without an `id`, with `access` `'none'` or with `can_read` false are dropped, and a `get()` that answers another id counts as `null`.
+Only one module may register: a second one's `register()` throws and that module is skipped. A skipped module's provider is removed. Core passes on only `id`, `number`, `title`, `owner_label`, `access` (`'read'`, `'write'`, `'owner'` or `'admin'`), `can_write`, `can_manage`, `archived`, `is_template`, `item_count`, `item_counts` and `updated_at`. `can_write`, `can_manage`, `archived` and `is_template` must be `true` or `1`. Entries without an `id`, with `access` `'none'` or with `can_read` false are dropped, and a `get()` that answers another id counts as `null`.
 
 **Backend, every module: `coreApi.projects`.** This is the membership check to use (for example by the `ai` module). No manifest `requires` is needed for these. In a request pass `req.user`; pass only a user the module is really acting for.
 - `available()` returns a boolean.
@@ -406,6 +440,10 @@ Only one module may register: a second one's `register()` throws and that module
 - `get(userOrUserId, id)` returns a `Project` or `null`.
 - `list(userOrUserId, options)` returns `Project[]`.
 - `get` and `list` return `null` / `[]` on any failure.
+- `status(userOrUserId)` (v0.1.227) returns the same object as `GET /api/projects/status`, or `null`.
+- `hasWritableProject(userOrUserId)` returns true only when it is known they have one (use it as the server-side gate).
+- `mayCreate(userOrUserId)` returns a boolean.
+- `status`, `hasWritableProject` and `mayCreate` never throw.
 
 **Frontend: `coreApi.registerProjectsProvider(provider)`.** Now only the **fallback**, used when the server has no provider. The provider is:
 - `list({ scope: 'mine' | 'shared' | 'all', search, includeArchived })` returning `Project[]`
@@ -418,6 +456,8 @@ Only one module may register: a second one's `register()` throws and that module
 - with `requireWrite`, read-only projects are greyed out with the reason;
 - `rememberAs` is a page-state key: the selection, the tab and the search survive leave, return and reload. A remembered selection is dropped, quietly and reported through `onChange` (`null` or `[]`), only when the project is gone or unreadable (`null`, `404`, `403`), archived or no longer writable; a failed request keeps it. On the first render with a remembered selection, `onChange` is called once with `(id, null)` or `(ids, null)`;
 - with no provider it shows "Projects are not available here (the module that provides them is not installed)".
+
+ProjectPicker is for dialogs; the layer at the top of a module page is `ProjectTabs`. Any `value` other than `undefined`, `null` included, makes ProjectPicker controlled. To restore a remembered selection, omit `value`: the remembered selection is then reported once through `onChange`. With both `value` and `rememberAs`, `value` decides what is selected (the module keeps it), while the picker's tab and search are still remembered.
 
 **`<coreApi.ui.ShareDialog title levels=[{ value, label }] loadGrants() onGrant({ type, id, level }) onRevoke({ type, id }) onClose />`.** Generic: the owner module supplies what a grant is. `loadGrants()` returns `[{ type: 'user' | 'group', id, label, level }]`. Candidates come from `GET /directory` (`docs/MFF-Core_api.md`).
 

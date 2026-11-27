@@ -166,6 +166,15 @@ Normalized many-to-many between users and roles — `role_id` is a foreign key, 
 
 Written once by `install/setup-database.js`, never updated afterward. See `docs/MFF-Core_predetermined-mode.md`.
 
+### core_settings
+Facility-wide settings changed in the UI, one row per key (core v0.1.227). In `schema.sql`; on an updated deployment core creates it on the first change.
+- setting_key VARCHAR(64) PK
+- setting_value VARCHAR(255) NOT NULL
+- updated_by BIGINT NULL
+- updated_at TIMESTAMP
+
+Current key: `projects.members_may_create` (`'1'` / `'0'`; missing means yes).
+
 ### core_file_uploads
 - id BIGINT PK
 - file_name VARCHAR(255) NOT NULL (stored filename on disk)

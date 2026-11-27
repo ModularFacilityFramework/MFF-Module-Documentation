@@ -24,6 +24,10 @@ After login, you are redirected to the dashboard.
 
 Every list of people (Users tables, recipient lists, group PIs, search, exports) is sorted by first name, then last name. Drop-downs and recipient lists show "First Last (username)".
 
+## Projects
+
+Each project module has one tab per project at the top. You need a project before starting project work: one you can write in ("Project template" does not count). If you do not have one, you can request one from the banner. Approvers can create a project for a new person, or give them access to one, while approving their registration.
+
 ## Sorting tables
 
 In every table, each column title has ▲ (ascending) and ▼ (descending) buttons. Numbers, dates and names sort naturally, and empty cells are always at the bottom. The table remembers your choice. Click the highlighted arrow again to go back to the usual order.
