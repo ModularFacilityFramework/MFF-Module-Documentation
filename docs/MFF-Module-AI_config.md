@@ -100,7 +100,7 @@ Setup -> Model (switch permission as before):
 - They call the slurm module's read-only routes (slurm 0.1.46 or later): `GET /external/queue?scope=own|all`, `/external/job-state/<id>` and `/external/cluster-state`. The call is `coreApi.callModuleAsUser(<asking user's id>, 'slurm', ...)`, so the ai manifest has `"requires": ["slurm"]`.
 - The slurm module decides what each person may see; the AI narrows that further to its levels (ai 0.1.31). At the Standard level the AI gets only the person's own jobs and per-partition totals, even when the slurm module counts the person as staff: listing every user's jobs (`all=true`) is refused, and per-node detail (node names, state reasons) is removed. At the Advanced level the AI gets what the slurm module allows: every job and per-node detail for its staff roles (developer, administrator, facility_manager, facility_staff).
 - The slurm module's own rule:
-  - normal users get only anonymous totals and their own jobs, as the slurm module defines them: the job's Slurm user name is the person's MFF user name, and slurm has not recorded the job as submitted by another MFF user. Jobs sent to Slurm through an MFF module (`POST /external/jobs`) run under MFF's own account, so they normally do not appear in the sender's own queue or job state; the AI says so rather than calling them non-existent.
+  - normal users get only their own jobs (Slurm user name = MFF user name, and not recorded by slurm as submitted by another MFF user) and anonymous totals;
   - staff (developer, administrator, facility_manager, facility_staff) may see all jobs and nodes;
   - another person's job answers "There is no job <id> that you can see", the same as a missing one.
 - At the Standard level the AI sends `scope=own` on `/external/queue`, `/external/job-state/<id>` and `/external/cluster-state`, so the slurm module itself answers with the person's own jobs only and no per-node detail. `scope=own` on `job-state` and `cluster-state` needs slurm 0.1.49 or newer; until then the AI's own narrowing above applies.
@@ -112,7 +112,7 @@ Setup -> Model (switch permission as before):
   - Slurm unavailable;
   - the Slurm module cannot be reached (for example, slurm older than 0.1.46).
 - The AI is told that partitions share nodes, so figures are never added across partitions, and that "free" does not promise a job will start.
-- Tested against a stand-in built to the slurm module's contract; not yet against the real routes, which need slurm 0.1.46 deployed.
+- Tested against a stand-in built to the slurm module's contract; not yet against the live cluster, which needs slurm 0.1.49 or newer and ai 0.1.33 or newer deployed.
 
 ## Date and time
 - Every request, for every model (Qwen, Mistral, DeepSeek), starts its system prompt with a line made fresh for that request. It gives the current date and time in Europe/London (with GMT/BST), today's date as YYYY-MM-DD, and when the user's message was sent, and tells the model never to say it does not know the date or time.
