@@ -91,7 +91,7 @@ tab shows an error above the app.
 
 ## `GET /inspections`
 
-`GET /inspections?projectId=<id>`, for a user who can read that project. Returns `{ ownOnly, inspections: [{ id, fileName, savedBy, savedAt }] }`, newest first; `savedBy` is "First Last (username)", or empty for an unknown author. In the Project template a user is shown only their own, unless they own the template or are an administrator or developer; if core doesn't say whether a project is the template, it is treated as one. `400` without a project, `404` for a project the user can't read, `503` on a core without projects. It lists records only; it gives no access to the decision files.
+`GET /inspections?projectId=<id>`, for a user who can read that project. Returns `{ ownOnly, inspections: [{ id, fileName, savedBy, savedAt }] }`, newest first; `savedBy` is "First Last (username)", or empty for an unknown author. In the Project template a user is shown only their own, unless they own the template or are an administrator or developer; if core doesn't say whether a project is the template, it is treated as one. `400` without a project, `404` for a project the user can't read, `501` on a core without projects. It lists records only; it gives no access to the decision files.
 
 ## `GET /decisions/download`
 
