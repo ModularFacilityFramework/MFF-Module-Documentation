@@ -60,6 +60,12 @@ them use those routes: the role check still refuses them. `frontend/index.js`
 registers the tab with `pageKey: 'setup'`, so core hides it from anyone
 without access to the page (needs core v0.1.144+).
 
+## Inspections belong to projects
+
+The manifest has `"requires": ["science"]` and `"actsAsUsers": true`, so Science must be installed before this module is installed or updated. On the inspection tab the user picks a project with core's `ProjectPicker` (only projects they can write to can be chosen). The app is shown once one is chosen, and reloads when the project changes, so anything unsaved inside the app is lost then. The chosen project is remembered per user. Each saved decision is one inspection: a row in `pandda2inspect_inspections` (project, file name, who saved it) and a project item in Science (`item_type` `inspection`, link `/dashboard?tab=pandda2inspect`).
+
+Decisions saved before this go into Science's "Project template", found through Science's route, never by title. It runs about 15 seconds after the backend starts, retries until it succeeds (calling Science as an administrator or developer), and only takes files older than the backend's start. The author comes from the file name; if no single user matches, the item has no author and only the template's owner and administrators see it (`saved_by` 0). New work cannot be saved into the template.
+
 ## `GET /config`
 
 Any authenticated user. Returns `{ deployEnabled }` —
@@ -68,13 +74,7 @@ Any authenticated user. Returns `{ deployEnabled }` —
 
 ## `POST /decisions`
 
-Any authenticated user. Saves the JSON body as a new file in
-`MODULE_PANDDA2INSPECT_DECISIONS_DIR`, named
-`<username>_<timestamp>.json` (e.g.
-`jsmith_2026-11-05T13-40-12-345Z.json`) and returns `{ fileName }`. Nothing
-is ever overwritten. Characters unsafe in a file name are replaced with `_`
-in the username, since core doesn't restrict them. Limited to core's global
-1 MB JSON body size. `400` if the setting isn't configured.
+`POST /decisions?projectId=<id>`, for a user who can write to that project (checked with `coreApi.projects.access`). Saves the JSON body as a new file in `MODULE_PANDDA2INSPECT_DECISIONS_DIR`, named `<username>_<timestamp>.json` (e.g. `jsmith_2026-11-05T13-40-12-345Z.json`), records its project and lists it in Science. Returns `{ fileName, inspectionId, projectId, registered, registrationError }`; `registered: false` means the decision is saved but is not listed in Science, and the tab shows a warning. Nothing is ever overwritten. Characters unsafe in a file name are replaced with `_` in the username, since core doesn't restrict them. Limited to core's global 1 MB JSON body size. `400` if the setting isn't configured or no project is given, `404` for a project the user can't read, `403` for one they can only read, `409` for an archived project or the Project template, `503` if projects aren't available.
 
 The embedded app itself knows nothing about this: it still tries to download
 `decision.json`, and `frontend/components/catchDecisionDownload.js` stops that
@@ -85,7 +85,7 @@ tab shows an error above the app.
 
 ## `GET /decisions/download`
 
-`developer`/`administrator` only — the Update tab's "Download all
+`developer`/`administrator` only — the setup tab's "Download all
 decisions" button. Every `.json` file in
 `MODULE_PANDDA2INSPECT_DECISIONS_DIR` in one zip
 (`pandda2inspect_decisions_<timestamp>.zip`, UTC, e.g.
@@ -129,7 +129,7 @@ Every attempt — success or failure — is logged to
 
 `developer`/`administrator` only. The running or most recent update:
 `{ running, success, output, step, stepSeconds, totalSeconds }`, with the
-combined stdout/stderr so far, token redacted — what the Update tab's debug
+combined stdout/stderr so far, token redacted — what the setup tab's debug
 window polls. In memory only, so a backend restart clears it (`running:
 false`, `success: null`, empty `output`).
 
