@@ -157,6 +157,17 @@ Setup -> Model (switch permission as before):
   - files: `tools/gpu6/whisper_server.py`, `whisper-install.sh`, `whisper-rollback.sh` (`--all` also removes the venv and model).
 - Config key `MODULE_AI_WHISPER_URL` (optional), for example `http://192.168.1.16:8003`.
 
+## Database tool (developers only)
+- `db_query_mariadb` lets the AI read MFF's MariaDB through a dedicated read-only account created by the user. Config keys (all optional): `MODULE_AI_MARIADB_RO_HOST` (default `127.0.0.1`), `MODULE_AI_MARIADB_RO_PORT` (default 3306), `MODULE_AI_MARIADB_RO_USER`, `MODULE_AI_MARIADB_RO_PASSWORD`. What the account may read is decided by its grants. The user creates it with `SELECT` only, on the databases and tables chosen, never on tables with password hashes or tokens.
+- Only developers and administrators can use it. The module enforces this in code, so Setup → Tools refuses a wider audience.
+- Each call is limited in the backend:
+  - one statement: `SELECT`, `WITH`, `SHOW`, `DESCRIBE` or `EXPLAIN`. Refused: `INTO OUTFILE`/`DUMPFILE`, `LOAD_FILE`, `SLEEP`, `BENCHMARK`, locks, `FOR UPDATE` and `/*!` version comments;
+  - run in a read-only transaction that is always rolled back;
+  - `max_statement_time` 10 s;
+  - at most 200 rows, with long cells shortened.
+- Every query is logged in `ai_db_query_log`: answer id, user, database, the query text, rows returned, ms, ok, error.
+- The MSSQL server on nusbf is not connected yet: it waits for its own read-only account.
+
 ## Data
 - Per person, in their workspace: `module-AI/chats/<id>/` (chat.json, messages.jsonl, files/), `module-AI/trash/`, `module-AI/uploads-tmp/`. Folders 0700, files 0600.
 - Database tables: `ai_settings`, `ai_usage`, `ai_storage_users`, `ai_model_switch_log`, `ai_tool_log`, `ai_benchmark_prompts`, `ai_benchmark_runs`, `ai_benchmark_models`, `ai_benchmark_results`. No chat text.
