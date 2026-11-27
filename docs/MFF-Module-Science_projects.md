@@ -27,6 +27,7 @@ items. Access control is at the application level only: Science sets no file per
 ## A project before project work
 - A person has a project when they can write in at least one that is not archived and is not the Project template (as owner, or shared with them or their group with write; administrators and developers write in every project).
 - Someone with no project cannot create one: "+ New project" is hidden in Science, and creating is refused with 403 (Science's page, POST /external/projects, and the provider's create; the provider's canCreate answers false). Administrators and developers can always create. Whether someone who has a project can create more is core's decision on core 0.1.224 or later (coreApi.projects.mayCreate: this rule plus core's setting "people with a project may create more", default yes): Science's page, POST /external/projects, GET /status, GET /external/project-status and the provider's status and requests.create follow it, so with the setting off such a person sends a request instead. On an older core they can create more.
+- People can create as many projects as they want: there is no limit on the number, and disk quotas, later, are the only limit planned (not built). So core's setting "people with a project may create more" is yes by default. Someone with no project they can write in still asks for their first one, or gets one at registration approval.
 - Modules ask GET /external/project-status before project-based work, and send a person with has_project false to the returned link.
 
 ## Request a project
