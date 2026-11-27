@@ -1,8 +1,8 @@
 # Fleet module: overview, access, configuration and machine setup
 
-Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `1fad83e`.
+Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `7781f89`.
 
-**Status:** not yet deployed. The machine scripts (`agent/`) have never been run on any machine.
+**Status:** the module is not yet deployed. On 27/11/2026 the machine scripts (`agent/`) from commit `1fad83e` were installed, checked, uninstalled and reinstalled on one machine (`nusbf-raw4`). Two faults in the BeeGFS mount check were found there and fixed in `7781f89`. That fix has **not** yet been re-run on a machine; it has only been tested offline with fake mount tables.
 
 ## Pages
 - **Summary:** a count per traffic light, and cards grouped into Servers, GPU nodes, Storage and Workstations, with problem machines first. The same data is also a sortable table.
@@ -81,7 +81,7 @@ The backend's OS user must be able to read the key files and `MUNIN_DB_DIR`, and
 - **Upgrade:** it is non-interactive and keeps existing configuration files.
 
 ## Machine setup (`agent/`)
-Debian and Ubuntu only. An administrator runs it as root; nothing in MFF runs it. Linux only (no Windows yet). **These scripts have never been run on any machine.**
+Debian and Ubuntu only. An administrator runs it as root; nothing in MFF runs it. Linux only (no Windows yet). See "Status" at the top for what has been run on a machine.
 
 Install:
 
@@ -104,10 +104,11 @@ It refuses while an upgrade is running. It keeps the packages, the munin-node co
 - The accounts `fleetread` (no sudo) and `fleetact`. There are no passwords. The `authorized_keys` files are root-owned, with `restrict`, `from=` and the forced command `/usr/local/sbin/fleet-dispatch`.
 - Sudo rules that are literally only `/usr/local/sbin/fleet-upgrade ""` and `/sbin/reboot now`.
 - A `fleet-rootfacts` systemd service and timer.
-- The Munin plugins `fleet_updates`, `fleet_reboot`, `fleet_services`, `fleet_raid`, `fleet_temps` and `fleet_netlink`. `fleet_gpu` is added only where `nvidia-smi` exists, and `fleet_mounts` only with BeeGFS.
+- The Munin plugins `fleet_updates`, `fleet_reboot`, `fleet_services`, `fleet_raid`, `fleet_temps` and `fleet_netlink`. `fleet_gpu` is added only where `nvidia-smi` exists, and `fleet_mounts` only with BeeGFS. The BeeGFS mount check matches every mount type starting `beegfs` (a local build shows, for example, `beegfs7-7`).
+- Debian 13 starts munin-node with `ProtectHome=yes`, which hides `/home`, `/root` and `/run/user` from plugins. Only where a BeeGFS mount is in one of those, `install.sh` adds `/etc/systemd/system/munin-node.service.d/fleet.conf` with `ProtectHome=read-only`, so munin-node plugins on that machine can see those folders read-only. `uninstall.sh` removes it.
 
 **By hand:**
 - If `sshd` uses `AllowUsers` or `AllowGroups`, add both accounts.
-- munin-node must allow the MFF server.
+- munin-node must allow the MFF server. If it does not, add a `cidr_allow` line in `/etc/munin/munin-node.conf`.
 
 Not tested with `sudo-rs`.
