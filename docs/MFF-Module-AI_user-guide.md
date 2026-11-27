@@ -19,7 +19,7 @@ The AI works at one of two levels, shown beside the model name: Standard (everyo
 - Chats are listed by date, with search in titles and text. **…** next to a chat renames or deletes it. Deleted chats can be restored from "Deleted" until they are removed for good (30 days unless changed on Setup).
 
 ## Files
-- Scanned PDFs and photos of documents are read with OCR, so the AI can answer from them. Scanned PDFs are read with OCR (the first 30 pages).
+- Scanned PDFs (the first 30 pages) and photos of documents are read with OCR, so the AI can answer from them.
 - You can attach MTZ, mmCIF and PDB files: the AI reads their space group, cell, resolution and contents. If the facility has switched it on, the AI can also run Python to calculate or make charts, which appear in the chat.
 - Attach, drag in or paste: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx), text files (code, CSV, JSON, ...), PNG, JPEG or WebP images, and MTZ reflection files, and mmCIF and PDB coordinate files (as text). The original is kept unchanged; click it to download it.
 - A long file is read only as far as it fits; the answer says so. If the tool "Read attached file" is installed, the AI can search the rest.
