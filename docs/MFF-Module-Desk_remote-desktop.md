@@ -1,6 +1,6 @@
 # Desk module: Remote Desktop
 
-Module `desk` (mount `/desk`, version 0.1.15). It gives a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login. It is private: see "Who may use it".
+Module `desk` (mount `/desk`, version 0.1.16). It gives a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login. It is private: see "Who may use it".
 
 ## What the user sees
 One left-hand menu entry, "Desktop" (`registerMenuPage`, path `/desk`). It is the only way in: there is no Dashboard tab. Core orders menu entries alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
@@ -10,8 +10,12 @@ Only the accounts on Desk's own list of allowed users (`ALLOWED_USERS`, see "Con
 
 - Every Desk route, `/proxy` and the WebSocket tunnel answer `404` to every other account, developers and administrators included.
 - "View as" and background or delegated calls from other modules are refused too. "View as" gets `404`.
-- **Limitation:** other developers and administrators still see the "Desktop" menu entry, although they cannot use it. This stays until core offers a per-user restriction, which has been requested from `mff-core`.
-- The list controls the app only. Anyone who can edit the server configuration, rename or reset accounts, or reach Guacamole directly is outside it.
+- Desk registers its allowed-user check with `coreApi.registerAccessRestriction` (`docs/MFF-Core_module-core-api.md`, "Limiting a module or page to named accounts"). On mff-core 0.1.234 or later, every account not on the list (developers, administrators, `SUPERUSER_ROLE` and "view as" included) gets no "Desktop" menu entry, and a `404`.
+- On an older core those accounts still see the menu entry; Desk still refuses them itself.
+
+**Limitations:**
+- Developers and administrators still see Desk under Preferences → Modules and Access, marked with a warning, and can update or remove it.
+- Whoever can change accounts (for example reset the allowed account's password), edit `App_backend/.env`, change module code, reach the server, or reach Guacamole directly can get round the list.
 
 ## How a session starts
 1. The button sends `POST /api/desk/session` (`authenticateToken` and `checkRole` `developer`). It refuses "view as" identities.
