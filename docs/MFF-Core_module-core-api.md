@@ -354,7 +354,7 @@ If you'd rather core's admin manage per-page access for you (Setup → Preferenc
 
 | Field | Type | Meaning |
 |---|---|---|
-| `loading` | `boolean` | `true` until `GET /api/modules` has been answered by the backend. Render nothing (or a placeholder) rather than guessing while this is true. It also stays `true` while the backend cannot be reached (see `unreachable`). |
+| `loading` | `boolean` | `true` until `GET /api/modules` has been answered by the backend. Render nothing (or a placeholder) rather than guessing while this is true. It also stays `true` while the backend cannot be reached (see `unreachable`). It becomes `true` again when who is signed in (or viewed) changes, until the new user's answer arrives. |
 | `visible` | `boolean` | Whether *you* (this module) are even in the list for this user — mirrors whether your whole module is shown at all. `false` means only that the backend's real list lacks your module (not installed, or no access for this user); it is not an answer while `loading` is `true`. |
 | `pages` | `string[] \| null` | `null` = your module declares no pages, so there is nothing to hide. An array = only these declared keys are allowed. `[]` while `loading`. |
 | `unreachable` | `boolean` | `true` while `GET /api/modules` cannot be reached (the backend is restarting after an Install/Update, or the request timed out). `loading` is `true` at the same time. |
