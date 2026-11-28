@@ -79,7 +79,8 @@ Only the accounts on Desk's own list of allowed users (`ALLOWED_USERS`, see "Con
 
 ## When the user's sign-in ends
 - With mff-core 0.1.235 or later, Desk registers `coreApi.onUserSignOut` (`docs/MFF-Core_module-core-api.md`, "When a user's sign-in ends"). A logout (even with an expired access token), a run-out sign-in that the browser tries to renew, deactivation, a password reset or deletion revokes all of that user's desk sessions, on every device, and closes their open WebSocket tunnels and in-flight proxy requests.
-- Not covered, so the desktop sign-in time limit applies (see "Configuration tab"): a sign-in that runs out while the browser never returns, changes made straight in the database, and events that happen while the backend is down (a backend restart drops all desk sessions anyway).
+- Sign-out events do not cover: a sign-in that runs out while the browser never returns, changes made straight in the database, and events that happen while the backend is down (a backend restart drops all desk sessions anyway).
+- **The time limit:** the sign-in time is fixed when the desktop is opened, so a changed setting affects only desktops opened later. It is checked on every proxy HTTP request and when a WebSocket tunnel connects or reconnects. Expiry does **not** close a WebSocket tunnel that is already open, nor cut a request already in flight: an open desktop keeps working until it disconnects. Only the sign-out events above (mff-core 0.1.235 or later) and a backend restart cut open connections.
 - On an older core, logging out of the app does not end a desk session before it expires.
 - Removing the `developer` role does not cut an already-open tunnel; it applies at the next connect.
 
@@ -122,7 +123,7 @@ Version 0.1.18 has been run only against a mock core, a fake Guacamole and a scr
 
 ## WebSocket tunnel
 Desk handles Guacamole's WebSocket tunnel through `coreApi.registerUpgradeHandler('/proxy/websocket-tunnel', handler, { identify })` (`docs/MFF-Core_module-core-api.md`, "WebSocket"). The manifest has `"websocket": true`, and the module depends on `ws`.
-- The `identify` callback reads the HttpOnly `desk_rd_session` cookie (the per-session token minted by `POST /session`; it expires with the desktop sign-in). Guacamole's own `token` query parameter therefore passes through untouched.
+- The `identify` callback reads the HttpOnly `desk_rd_session` cookie (the per-session token minted by `POST /session`; it expires with the desktop sign-in, which does not close an open tunnel: see "When the user's sign-in ends"). Guacamole's own `token` query parameter therefore passes through untouched.
 - Core re-checks the user's real identity and module access on every connect.
 - The tunnel also requires the `developer` role on every connect and reconnect, the same as the HTTP `/proxy` routes: `403`, or `503` if the role lookup fails. An already-open tunnel is not cut when the role is revoked; the check applies at the next connect.
 - The backend relays frames to Guacamole's `/websocket-tunnel` with the `guacamole` subprotocol.
