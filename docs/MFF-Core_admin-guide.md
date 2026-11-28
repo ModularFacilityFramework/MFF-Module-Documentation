@@ -72,6 +72,14 @@ Result:
 - `administrator` is the default elevated role; `developer` acts as a break-glass superuser, bypassing all `checkRole()` checks (configured via `SUPERUSER_ROLE` in `.env` — empty by default)
 - To change a user's role, update `setup_user_roles` via an admin UI (if available) or directly in the database, referencing the existing `setup_roles.id`
 
+## Projects
+Core v0.1.227. Shown only when a projects module such as Science is installed.
+
+A person needs a project before starting project work: one they can write in that is not archived and is not the Project template.
+
+- **Giving a project at approval** (administrators and developers): when you approve a registration, or use Approve & merge, you can in the same step create a new project for the person and/or give them read or write access to existing projects. This is optional. The account is approved first; if the project step fails the account stays approved and you can try the step again.
+- **Who can create projects:** administrators and developers always. Others only if they already have a project, the setting "People who already have a project may create more projects" is on (Users & Groups, on by default) and the projects module allows it. A person without a project cannot create one: they use "Request a project" in the banner.
+
 ## Password Reset and MFA
 - Password reset tokens are short-lived and one-time use
 - MFA can be enabled per user via the `/auth/mfa/*` endpoints when the UI exposes the feature
