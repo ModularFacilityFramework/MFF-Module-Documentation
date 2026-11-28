@@ -6,7 +6,7 @@ Authentication
 - Protected endpoints require `Authorization: Bearer <accessToken>`.
 - Obtain tokens via `POST /auth/login`. If the account has MFA enabled, login returns a challenge instead of tokens — complete one of the `/auth/mfa/verify-*` endpoints to finish.
 - When an access token expires, refresh via `POST /auth/refresh` (rotates the refresh token).
-- File downloads (`GET /files/:filename`) also accept the access token as a `?token=` query parameter, since `<img>`/`<a>` tags can't send an `Authorization` header — do not rely on this for any other endpoint.
+- File downloads (`GET /files/:filename`) also accept the access token as a `?token=` query parameter, since `<img>`/`<a>` tags can't send an `Authorization` header. Besides this, only module routes listed in their manifest's `queryTokenRoutes` accept it; no other core endpoint should be relied on for it. Core's request log shows such a token as `token=[redacted]`.
 
 ## Auth (`/auth`)
 
