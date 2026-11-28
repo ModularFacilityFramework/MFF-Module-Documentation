@@ -110,6 +110,8 @@ Every Doppio session runs in a Science project (`docs/MFF-Module-Science_project
 
 From v0.1.52 the proxy paths are signed in through core's identified routes (core 0.1.233 or later): the manifest lists `"identifiedRoutes": [{ "path": "/sessions/:id/proxy" }]` and the module calls `coreApi.registerIdentifiedRoute`. For every request (all methods) core calls the module's `identify`, which requires the unexpired ticket (`?ticket=` or the HttpOnly, SameSite=Lax, per-session-path cookie) of that session and that its owner still has write on the session's project (adopted template sessions excepted; the answer is cached 30 s, so losing access takes effect within about 30 s); core then checks the account and module access and refuses cross-site requests. No ticket is issued while viewing as another user. The proxy re-sends JSON bodies that core has already parsed, and drops doppio-web's `Set-Cookie` and any `Referrer-Policy: no-referrer`. On an older core the live view does not work.
 
+From v0.1.53, when core reports that a user's sign-in has ended (`coreApi.onUserSignOut`, core 0.1.235 or later: logout, expiry, deactivation, password change, deletion), all of that user's proxy tickets are cleared, on every device; opening the Doppio page after signing in again issues a new one. A response already being streamed is not cut off. On an older core, and for endings core does not report, the 20-minute idle expiry is the limit (it slides while the ticket is in use).
+
 ## Routes
 
 ### `POST /sessions`
