@@ -1,6 +1,6 @@
 # Fleet module: overview, access, configuration and machine setup
 
-Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `97d6d68` (v0.1.15).
+Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `b42f5aa` (v0.1.16).
 
 **Status:** the module is not yet deployed. On 27/11/2026 the machine scripts (`agent/`) from commit `1fad83e` were installed, checked, uninstalled and reinstalled on one machine (`nusbf-raw4`). Two faults in the BeeGFS mount check were found there and fixed in `7781f89`. That fix has **not** yet been re-run on a machine; it has only been tested offline with fake mount tables.
 
@@ -9,7 +9,7 @@ Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's mac
 - **One tab per machine:**
   - a title bar with two action buttons, labelled exactly `sudo apt-get update && sudo apt-get -y dist-upgrade && sudo apt-get -y autoremove` and `sudo reboot now`;
   - a Refresh button in the title bar that reads this machine again now, with the time the reading was taken;
-  - an identity card, collected over SSH daily and with "Collect now";
+  - an identity card, collected over SSH daily and with "Collect now", which needs only the read key on the server (also for a machine not yet verified);
   - live health, read only while the tab has focus;
   - the speed of the connected port;
   - usage charts, read from the Munin master's RRD files;
@@ -22,7 +22,7 @@ A Refresh button skips the short time for which a reading is reused (55 s on the
 
 Page state and table sorting use core's helpers. A first start seeds 30 machines (`backend/data/seedMachines.json`): `NUSBF-GPU1` is retired; `NUSBF-4C`, `NUSBF-20C` and `Tundra-9963484` are Windows; `garcon` is at `10.64.40.106` with Munin at `192.168.1.21`.
 
-An already seeded list gets these five corrections once, at the first start after the Update (marker row `correction:2026-11-28`); entries whose address was edited are left alone. Updating needs core's own Update, which adds the column `fleet_machine.munin_address`. The Update to v0.1.15 adds the table `fleet_disk_role`.
+An already seeded list gets these five corrections once, at the first start after the Update (marker row `correction:2026-11-28`); entries whose address was edited are left alone. Updating needs core's own Update, which adds the column `fleet_machine.munin_address`. The Update to v0.1.15 adds the table `fleet_disk_role`. The Update to v0.1.16 adds the table `fleet_host_key` and five columns of `fleet_machine`.
 
 ## Disc roles
 Each disc (a mounted file system, as Munin's `df` reports it) has a role: **OS**, **cache** or **data storage**. Only OS and cache discs turn amber or red when they fill up, in space or in inodes. A data storage disc never does, however full: filling up is its purpose. SMART, RAID and BeeGFS mount checks are unchanged. Roles belong to mounted file systems, not to the physical drives on the identity card. The role is shown on the Summary cards, in three table columns (OS discs, Cache discs, Data storage; each lists its discs and sorts by the fullest) and on the machine tab's gauges and checks. File systems kept in memory (such as `/run` and `/dev/shm`) count as cache; cards and the table list them only when they are over the limit.
@@ -58,6 +58,15 @@ Default limits (changed on Settings):
 - **Also warning:** pending updates, a reboot needed, RAID rebuilding, reallocated sectors, an expected NVIDIA GPU not reported.
 
 Stale Munin history shows "No history since <date>".
+
+## Verification
+The buttons of a machine work only once it is verified. This is automatic. At the first connection Fleet reads the machine's SSH host key, logs in with the read key and, if the machine reports the expected hostname, stores the key and marks the machine verified, with the time and "automatic". It tries about 15 s after the backend starts, then hourly for unverified machines (a page showing the machine, or saving it on Settings, tries sooner, at most every 10 minutes per machine). No manual step is needed.
+
+Where a fingerprint was recorded at install for the expected hostname (table `fleet_host_key`, filled from `backend/data/seedMachines.json`; 15 machines are bundled), the machine must offer exactly that key, otherwise Fleet does not log in. The record goes with the hostname, so renaming, re-adding or readdressing an entry does not drop it. If the records cannot be loaded at start-up, no new machine is verified.
+
+A person is needed only when something is wrong: another key than the recorded one, a changed key, or another hostname than expected. The machine is then blocked (buttons off), with a red warning on Settings and on the machine tab showing the old and new fingerprints. Someone with the "Settings" right accepts it on Settings → Verify, after comparing the new fingerprint with the machine's own; for a wrong hostname, accepting also makes the reported name the expected one. A machine also unblocks if the stored key and expected hostname come back, or (hostname) if the expected hostname is corrected on Settings. A changed key is never accepted automatically. It is noticed at the daily identity collection, with "Collect now" or "Verify now", and when a button fails on it. A refused login or no answer raises no warning: Settings shows the last attempt's message. Settings keeps the steps by hand (read host key, accept, Verify now).
+
+**Limit:** a successful key login does not prove which machine answered, because any SSH server can accept any key. For a machine without a recorded fingerprint, the first verification therefore trusts whatever answers at its address and reports the expected name.
 
 ## Access
 There are two layers:
@@ -95,7 +104,7 @@ The backend's OS user must be able to read the key files and `MUNIN_DB_DIR`, and
 ## Security
 - **Keys:** the private keys stay as files on the MFF host. Their paths and contents are never sent to the browser.
 - **SSH:** run with an argument list (no shell), `-F /dev/null`, only the pinned host key, strict checking, and no agent or forwarding. The only thing sent is one fixed word: `identity`, `upgrade` or `reboot`.
-- **Before the buttons work:** a person must read the host key, compare it and accept it, and then the hostname check must pass. Changing the address removes both.
+- **Before the buttons work:** the machine must be verified (see "Verification").
 - **Confirmation:** upgrade needs a confirmation. Reboot needs the exact machine name to be typed.
 - **One at a time:** one action per machine at a time.
 - **Logging:** every run and every refused attempt is logged. The row is written before the command starts, and the module never deletes log rows. Command output is redacted, and the newest 1,000,000 characters are kept.
