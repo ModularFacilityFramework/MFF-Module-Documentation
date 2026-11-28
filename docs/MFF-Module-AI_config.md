@@ -12,6 +12,7 @@ Add these by hand, then restart the backend. There is no page for them.
 | `MODULE_AI_CTL_SSH_KNOWN_HOSTS` | yes | known_hosts file with the GPU host's key |
 | `MODULE_AI_MODELS` | yes | `keyword=Label\|capabilities;...`, capabilities from `vision`, `thinking`, `thinking-r1`, `tools`. Keywords must match the controller |
 | `MODULE_AI_GUARD_URL` | no | guard model server, e.g. `http://<gpu6>:8002`; without it there is no guard check (`docs/MFF-Module-AI_safety.md`) |
+| `MODULE_AI_MCP_SERVERS` | no | tool (MCP) servers added at start-up (see "MCP servers") |
 | `MODULE_AI_DOCS_DIR` | no | folder with the docs, used when core has none (see "MFF docs tools") |
 | `MODULE_AI_SEARXNG_URL` | no | the facility's SearXNG for `web_search`, e.g. `http://127.0.0.1:8888` |
 | `MODULE_AI_WHISPER_URL` | no | Whisper speech to text on the AI server, e.g. `http://192.168.1.16:8003` |
@@ -52,9 +53,15 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
   - run Python (code sandbox), read structure and reflection files (gemmi);
   - MFF databases, MariaDB and MSSQL (read-only, Advanced only);
   - speech to text (the microphone button; never given to the model);
-  - plus the tools of every MCP server added in the "MCP servers" section (the facility's: PDBe API, PDBe Search, BioMCP).
+  - plus the tools of every MCP server added on Setup → Tool servers (the facility's: PDBe API, PDBe Search, BioMCP).
 
   Each tool also has a status (tested, done, planned) in "What the AI can do" at the top of the tab. None is installed at first. Only models with the `tools` capability use them.
+- **Tool servers** (developers and administrators only): a tool server is a separate program that gives the AI more tools, for example to look up protein structures (PDBe) or scientific articles and genes (BioMCP). The tab lists every server with its name, address, a status light (green "answering", red "not answering", grey "switched off"), how many tools it offers and how many are in use.
+  - "Add a server", at the top, takes a name and an address.
+  - Each server has buttons to show its tools, Disable or Enable it, and Remove it (with a confirmation).
+  - "Show tools" lists the server's tools with a tick box each: only ticked tools are offered to the AI. Who may use each tool (Standard or Advanced level) is still set on the Tools tab.
+  - The tab keeps its state per user (sorting, which servers show their tools, an unsaved add form).
+  - The old "MCP servers" section at the bottom of Setup → Tools is gone; the Tools tab now points to Tool servers.
 - **Skills:** short written instructions the AI loads for one kind of task. Only administrators and developers can change them; others with the Setup page get a read-only view. See `docs/MFF-Module-AI_skills.md`.
 - **Safety:** the safety and scope checks, extra server names to hide, added delay and the questions and answers stopped. Changes need administrator or developer. See `docs/MFF-Module-AI_safety.md`.
 - **Limits:** every quota and limit. Changes apply within a few seconds.
@@ -142,14 +149,18 @@ Setup -> Model (switch permission as before):
 ## MCP servers
 - The module has its own small MCP client (Model Context Protocol, Streamable HTTP, protocol 2025-06-18: `initialize`, `tools/list`, `tools/call`). Each tool of a registered MCP server becomes an ordinary tool of the module:
   - its function name for the model is `mcp_<server key>_<tool>`, at most 64 characters (a hash is added when shortened);
-  - it is installed, switched on and given an audience (and optionally roles) on Setup → Tools like any tool;
+  - it is offered to the AI only when ticked on Setup → Tool servers; its level (and optionally roles) is set on Setup → Tools like any tool;
   - the guard reads the arguments the AI sends and the answer that comes back (an unsafe request is stopped, an unsafe answer withheld);
   - every use is logged per answer in `ai_tool_use` (tool, server key).
-- Setup → Tools → "MCP servers" (changes need administrator or developer): add a server (key: lowercase, digits, `_`; name; `http(s)` address), switch it off or on, or remove it. The table shows each server's number of tools or its error. A "Source" filter shows the tools of one server. Saved in `ai_settings` `'mcp.servers'`; tool lists are cached 5 minutes.
+- Servers are managed on Setup → Tool servers (see "Setup tabs"). Saved in `ai_settings` `'mcp.servers'`; tool lists are cached 5 minutes.
+- Optional setting `MODULE_AI_MCP_SERVERS` (backend `.env`). Format: `key=Name|address|tool,tool`, with entries separated by `;`. The tool list is optional. Listed tools are put in use: a name matches the tool's own name, or a tool whose name contains it when no tool has that exact name.
+  - Each server is added once, at start-up (and checked every 10 minutes until it answers, for its default tools). A server the user removes on the Tool servers tab is never added again.
+  - Example (placeholder address): `MODULE_AI_MCP_SERVERS="pdbe_api=PDBe API|http://<host>:<port>/api/|get_ai_summary"`
+  - The facility's own servers and addresses: see the internal notes.
 - The facility's servers run on the backend host (nusbf), `127.0.0.1` only, as the system user `aimcp`. Install and rollback: `tools/nusbf/mcp-install.sh` and `mcp-rollback.sh` in the module repo.
   - `ai-mcp-pdbe.service`: the official PDBe MCP servers from EMBL-EBI (pdbe-mcp-server 2.0.1, Apache-2.0), at `http://127.0.0.1:8901/api/` (46 PDBe API tools: entries, molecules, ligands, validation, UniProt mappings, best structures, AI summaries, ...) and `http://127.0.0.1:8901/search/` (2 tools: PDBe Solr search and its schema).
   - `ai-mcp-biomcp.service`: BioMCP (biomcp-cli 0.9.3, MIT, GenomOncology; not the unrelated PyPI "biomcp"), at `http://127.0.0.1:8902/mcp`. It has 7 read-only tools over PubMed, Europe PMC, PubTator3, UniProt, InterPro, STRING, PDB, AlphaFold and more. No API keys are set, and each data source keeps its own terms of use.
-- After a deploy, add the three servers on Setup → Tools and install the tools wanted. Not all 46 PDBe API tools need be on: each tool's description takes room in every question.
+- After a deploy, add the three servers on Setup → Tool servers (or list them in `MODULE_AI_MCP_SERVERS`) and put in use the tools wanted. Not all 46 PDBe API tools need be on: each tool's description takes room in every question.
 
 ## Code sandbox and gemmi
 - `run_python` runs a Python 3 program written by the AI.
