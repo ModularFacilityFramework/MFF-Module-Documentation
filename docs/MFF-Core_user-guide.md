@@ -15,7 +15,7 @@ This guide walks end users through common tasks in the application.
 
 After login, you are redirected to the dashboard.
 - Use the left panel to access your profile image and logos if available
-- Tabs available depend on your role and what's installed: Announcements, Tickets, Files, Collaboration, Search, Reports (staff/admin only), Feedback, and Setup (Preferences, Users/Groups management — admin only)
+- Core's tabs are listed with module tabs in alphabetical order: **Setup** (Preferences and File Upload), **Support** (Tickets and Feedback; Announcements too for developers, administrators, facility managers and facility staff) and **Users & Groups** (only for those four roles, and only where Setup → Preferences → Access allows it; by default that is developers, administrators and facility managers). The Access settings and the installed modules also decide which tabs and sub-tabs you see.
 
 - Users & Groups has a "Statistics" tab with two pie charts: Groups Distribution and Job Roles Distribution. Click a group's slice to filter the Job Roles pie to that group; click it again, or press Reset, to show everyone.
 - The list of users is shown to developers and administrators. Others who have the Users & Groups tab see Groups and Statistics, and a note in place of the user list.
