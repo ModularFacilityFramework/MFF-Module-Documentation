@@ -49,7 +49,7 @@ Every Doppio session runs in a Science project (`docs/MFF-Module-Science_project
 - Launching is refused without a project, with read-only or no access, for an archived project, and for "Project template".
 - Each session is a project item: `item_type` `doppio_session`, `item_id` the session id, status the session state, link `/dashboard?tab=doppio`. It is sent again when a request sees a changed state; a `403` or `409` is final for that state, other failures are retried on a later request and shown as a warning. A state change nobody views is not sent.
 - A proxy ticket needs write access to the session's project (adopted template sessions excepted). A ticket already in use keeps working while it stays active.
-- Sessions created before this change are moved into Science's "Project template" by a background job (first run 15 s after start, delay doubling up to 1 h, until none are left), acting as each session's owner; owners core refuses (e.g. inactive or without Doppio access) stay unadopted and are logged. They are listed under the "Project template" tab.
+- Sessions created before this change are moved into Science's "Project template" by a background job (first run 15 s after start, delay doubling up to 1 h, until none are left), acting as each session's owner; owners core refuses (e.g. inactive or without Doppio access) stay unadopted and are logged. Moved sessions are listed, to their owner only, under the "Project template" tab.
 - New columns on `doppio_sessions`: `project_id`, `project_item_state`, `project_is_template` (added by core's schema diffing).
 
 ## Config keys
