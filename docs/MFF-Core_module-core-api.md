@@ -335,6 +335,7 @@ You get core's raw connection pool because some things (like the two functions a
     useAuth,                                   // hook - call it yourself, inside your own component
     useRoles,                                  // (userData) => { roles: string[], hasRole, hasAnyRole, hasAllRoles, canManageUsers } - see "The current user's roles"
     registerDashboardTab, registerMenuPage,    // the two extension points (see main README/CLAUDE.md)
+    menuPageOnSelect,                          // true: registerMenuPage calls onSelect on a menu click (core v0.1.237) - see the UI guide
     usePageState, clearPageState,              // remember a page's state per user - see "`usePageState`: page state persistence"
     registerProjectsProvider,                  // (provider) => void - owner module only (Science); fallback when the server has no provider, see "Projects"
     useProjectStatus, notifyProjectsChanged,   // does this person have a project; tell core's project components something changed - see "Projects"
