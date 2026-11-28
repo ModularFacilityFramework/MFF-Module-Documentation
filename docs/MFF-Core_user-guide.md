@@ -18,6 +18,7 @@ After login, you are redirected to the dashboard.
 - Tabs available depend on your role and what's installed: Announcements, Tickets, Files, Collaboration, Search, Reports (staff/admin only), Feedback, and Setup (Preferences, Users/Groups management — admin only)
 
 - Users & Groups has a "Statistics" tab with two pie charts: Groups Distribution and Job Roles Distribution. Click a group's slice to filter the Job Roles pie to that group; click it again, or press Reset, to show everyone.
+- The list of users is shown to developers and administrators. Others who have the Users & Groups tab see Groups and Statistics, and a note in place of the user list.
 - The Users edit form has a "Job position" select.
 
 ## Lists of people and user drop-downs

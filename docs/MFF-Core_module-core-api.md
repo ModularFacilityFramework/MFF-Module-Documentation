@@ -24,6 +24,8 @@ This is the exhaustive, current `coreApi` object a module receives — not a sum
     getUserWorkspacePathForUserId,        // (userId) => Promise<{active, path, reason}> - background identity, see below
     registerUpgradeHandler,               // (path, handler, { page?, identify? }) - WebSocket upgrade, see "WebSocket: `registerUpgradeHandler`"
     registerIdentifiedRoute,              // (path, { identify, page? }) - the module's own sign-in for a proxied application, see "Module's own sign-in"
+    registerAccessRestriction,            // (allows, { page }?) - limit this module, or one page, to the users your rule accepts, see "Limiting a module or page to named accounts"
+    onUserSignOut,                        // (handler) - be told when a user's sign-in ends, see "When a user's sign-in ends: `onUserSignOut(handler)`"
     registerProjectsProvider,             // (provider) => void - owner module only, see "Projects"
     projects: { available, access, get, list, status, hasWritableProject, mayCreate },  // every module - see "Projects"
     notify,                               // (userIdOrIds, { title, message, link }) - tell people something happened, see "Projects"
@@ -81,6 +83,31 @@ coreApi.registerAccessRestriction((user) => keyHolders.includes(user.username), 
 - **Not covered:** your `publicRoutes` (there is no user to ask about), a projects provider you register (core serves it to every signed-in user), and a page restriction on a WebSocket handler registered without `{ page }`. Your frontend code is still part of the one build: the restriction hides the UI, not the code.
 - On a core older than v0.1.234 the function does not exist: check `typeof coreApi.registerAccessRestriction === 'function'` and keep your own server-side check.
 - **What it does not protect against:** whoever runs the deployment. Setup → Preferences → Modules and Access still list every installed module to developers and administrators, so they can update or remove it. Anyone who can edit accounts, `App_backend/.env`, module code or the server can get round any rule held in the app.
+
+### When a user's sign-in ends: `onUserSignOut(handler)`
+
+Core v0.1.235. For a module that keeps something of its own alive for a signed-in user (its own session cookie, an open tunnel) and must end it too. Backend only; call it inside `register(coreApi)`. The browser needs nothing.
+
+```js
+if (coreApi.onUserSignOut) coreApi.onUserSignOut(async ({ userId, reason }) => {
+    await endMySessionsFor(userId);
+});
+```
+
+`userId` is a number: the account whose sign-in ended. Ending a "view as" fires nothing. `reason` is one of:
+
+| `reason` | When |
+|---|---|
+| `logout` | The user signed out. Works when the access token has already expired (core takes the user from the stored refresh token). |
+| `expired` | The browser asked to renew a sign-in that had run out. |
+| `deactivated` | The account was deactivated or made no-login, tester logins were closed, or a renewal was refused because the account may no longer sign in. |
+| `password_changed` | The password was reset, or tester passwords were regenerated. |
+| `deleted` | The account was deleted. |
+
+- Core never waits for the handler. A handler that throws is logged, and one still running after 10 s is logged; neither delays or fails the request.
+- The same user may still be signed in on another device, and an event can arrive more than once, so the handler must be safe to repeat.
+- Not reported: a sign-in that runs out while the browser never comes back, changes made straight in the database, and anything that happens while the backend is down. Keep your own time limit on your sessions.
+- Core has no "sign out everywhere" button and no change-password screen for a signed-in user, so there is no event for those.
 
 ### `listRoles()`
 
@@ -239,7 +266,7 @@ The path must also be in the manifest's `identifiedRoutes`. On it, every method,
 
 **Cross-site check:** with `Sec-Fetch-Site`, it must be `same-origin` (`none` for GET/HEAD/OPTIONS only), or the `Origin` must be the app's own. Without it, an `Origin` must be the app's own, and any method other than GET/HEAD/OPTIONS must send one. The app's own = the request's `Host`, `FRONTEND_URL` or a `CORS_ORIGINS` entry (`X-Forwarded-Host` is not read). A GET without `Origin` passes on plain HTTP, so GETs on these paths must not change anything. Core sets `Referrer-Policy: same-origin` on these responses so the application's own form posts send a real `Origin`; do not pass on a proxied `Referrer-Policy: no-referrer`.
 
-**The module's part:** HttpOnly, SameSite, short-lived cookie (core has no sign-out hook) whose Path reaches every route that needs it, including a WebSocket path; check that the ticket/cookie belongs to the resource in `params`; never create a ticket or cookie while `req.user.viewAs` is set (it would bypass read-only "view as"); do not mount `coreApi.authenticateToken` on these routes (header only); core's global `express.json` has already read JSON bodies, so a proxy must send `req.body` on; `identify` runs on every asset request, so keep it fast. Core's request log shows `?token=` and `?ticket=` as `[redacted]`. Sources: `App_backend/src/core/services/moduleIdentify.js`, `crossSite.js`, `tests/moduleIdentify.test.js`.
+**The module's part:** HttpOnly, SameSite, short-lived cookie (to end it when the user's sign-in ends, see "When a user's sign-in ends"; keep your own time limit too) whose Path reaches every route that needs it, including a WebSocket path; check that the ticket/cookie belongs to the resource in `params`; never create a ticket or cookie while `req.user.viewAs` is set (it would bypass read-only "view as"); do not mount `coreApi.authenticateToken` on these routes (header only); core's global `express.json` has already read JSON bodies, so a proxy must send `req.body` on; `identify` runs on every asset request, so keep it fast. Core's request log shows `?token=` and `?ticket=` as `[redacted]`. Sources: `App_backend/src/core/services/moduleIdentify.js`, `crossSite.js`, `tests/moduleIdentify.test.js`.
 
 ### WebSocket: `registerUpgradeHandler`
 

@@ -44,15 +44,18 @@ POST /auth/refresh
 - Body: `{ refreshToken }`
 - Rotates the refresh token (old one is revoked). Response: `{ success: true, accessToken, refreshToken }`
 - Standard accounts only.
+- A refresh token that has run out is revoked, and modules are told the sign-in ended (`expired`; `deactivated` when the account may no longer sign in). Since v0.1.235 every refresh token is unique (before, two sign-ins by one user in the same second got the same token).
 
 POST /auth/logout
 - Access: Public
 - Body: `{ refreshToken }` — revokes it.
 - Response: `{ success: true, message }`
+- Works without an access token. Tells modules that registered `coreApi.onUserSignOut` (reason `logout`).
 
 GET /auth/me
 - Access: Protected
-- Response: `{ success: true, user: { id, username, first_name, last_name, email, status }, roles: [{ role }] }`
+- Response: `{ success: true, user: { id, username, first_name, last_name, email, status, totp_enabled, can_list_users }, roles: [{ role }] }`
+- `can_list_users` (v0.1.236): whether this user may read `GET /users`, by the same rule. The frontend asks for the list only when it is true.
 
 Password reset (standard accounts only)
 - `POST /auth/reset-password-request` — Body: `{ username }`. Always responds with a generic success message (no user enumeration), regardless of whether the account exists.
@@ -90,7 +93,7 @@ POST /email/send-local-mail
 ## Users (`/users`)
 
 GET /users
-- Access: Protected, `administrator` only
+- Access: Protected, `developer` or `administrator` (plus the `SUPERUSER_ROLE`, if set). Anyone else gets `403`.
 - Query (optional): `page`, `limit`, `sortBy`, `sortDir`, `search`. The default order is by name (first name, last name, username), not by id. `sortBy` accepts `name` (the new default), `id`, `username`, `email`, `status`, `created_at`, `last_login`, `first_name` and `last_name`.
 - Response (paginated): `{ success, items, total, page, pages, limit }` — each item includes `roles: [{ role }]`
 - Each user also includes `job_position_id` and `job_position`, and `account_type` (`standard` or `no_login`) and `registration_pending`.
@@ -305,6 +308,7 @@ Errors: `400` for a bad key or value; `413` for a value over 64 KB or more than 
 - `GET /modules-management/available` — the modules that can be installed. Core no longer filters repos by name: every repo of the `ModularFacilityFramework` organisation (all pages of the GitHub listing, not just the first 100) whose default branch has a valid `module.manifest.json` with an `id` is a candidate, whatever the repo is called. Each entry has `id`, `label`, `repo`, `duplicateId`, `archived`, `alreadyCloned`, `pendingRestart`, `requires`, `requirementsError` and `missingRequirements`. The response also has `skippedRepos: [{ repo, reason }]` (repos without a usable manifest) and `reposSeen: [names]`. The result is cached for 10 minutes; an Install refreshes it.
 - `POST /modules-management/:id/install` — installs a module. Body: `{ repo }` (optional) installs that repo. Without `repo`, an id declared by exactly one repo installs as before; an id declared by several repos answers `409` listing the repos; a `repo` that does not declare the id answers `404`.
 - `GET /modules-management/job` — the latest job, with `modules: [{ id, label, from, to, behind, status, step, message }]` (`status` is `pending`, `running`, `done` or `failed`) and `failedModules`.
+- `GET /modules-management/installed` (v0.1.234) — every installed module, including one that restricts itself to other accounts. Response: `{ success, modules: [{ ...module, declaredPages, restrictedByModule, restrictedPages }] }`. `developer`/`administrator` only.
 
 ## Projects (`/projects`)
 
