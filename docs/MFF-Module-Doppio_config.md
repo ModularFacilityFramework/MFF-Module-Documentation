@@ -40,15 +40,16 @@ running."`, and writes `host`/`port` to `workDir/doppio-status.json` (or a
 `.error` sibling on failure) once ready. `backend/routes/sessionRoutes.js`
 polls for that file to learn when a session is actually reachable.
 
-## Projects (v0.1.50)
+## Projects (v0.1.51)
 
-Every Doppio session runs in a Science project (`docs/MFF-Module-Science_projects.md`). The manifest has `"requires": ["slurm", "science"]` and `"actsAsUsers": true`. Needs a core with `coreApi.projects` and `coreApi.ui.ProjectPicker`, and Science with its `/external/template` routes.
+Every Doppio session runs in a Science project (`docs/MFF-Module-Science_projects.md`). The manifest has `"requires": ["slurm", "science"]` and `"actsAsUsers": true`. Needs core 0.1.227 or later (`coreApi.projects`, `coreApi.ui.ProjectTabs`/`ProjectTask`), and Science with its `/external/template` routes. Not yet tested in a browser against a real core.
 
-- The Doppio tab shows core's ProjectPicker (write access required; choice remembered per user, page-state key `doppio.sessions.project`) and the caller's latest session in that project.
+- The Doppio page has core's ProjectTabs at the top (page-state key `doppio.sessions`). Each project tab lists the caller's own sessions in that project in a sortable table (`doppio.sessions.table`), with the chosen one shown below (kept per project, `doppio.sessions.selected:<projectId>`). The Launch button sits in ProjectTask; it is hidden while the caller has an active session in that project, and in "Project template". Other members' sessions are not shown.
+- Core's browser lock (a person with no writable project) is a screen aid; the server checks every launch itself.
 - Launching is refused without a project, with read-only or no access, for an archived project, and for "Project template".
 - Each session is a project item: `item_type` `doppio_session`, `item_id` the session id, status the session state, link `/dashboard?tab=doppio`. It is sent again when a request sees a changed state; a `403` or `409` is final for that state, other failures are retried on a later request and shown as a warning. A state change nobody views is not sent.
 - A proxy ticket needs write access to the session's project (adopted template sessions excepted). A ticket already in use keeps working while it stays active.
-- Sessions created before this change are moved into Science's "Project template" by a background job (first run 15 s after start, delay doubling up to 1 h, until none are left), acting as each session's owner; owners core refuses (e.g. inactive or without Doppio access) stay unadopted and are logged. A still-active one is opened from a notice on the Doppio tab.
+- Sessions created before this change are moved into Science's "Project template" by a background job (first run 15 s after start, delay doubling up to 1 h, until none are left), acting as each session's owner; owners core refuses (e.g. inactive or without Doppio access) stay unadopted and are logged. They are listed under the "Project template" tab.
 - New columns on `doppio_sessions`: `project_id`, `project_item_state`, `project_is_template` (added by core's schema diffing).
 
 ## Config keys
