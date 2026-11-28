@@ -350,7 +350,7 @@ A provider failure answers `500` "The projects request failed".
 
 - `GET /health` — Public — `{ status: 'ok', timestamp }`
 - `GET /config` — Public — runtime config the frontend fetches at startup (app name, banner title, API base path, upload path defaults). There is no frontend `.env`; this endpoint is the only source of frontend runtime config.
-- `GET /modules` — Public (token optional) — `[{ id, label, version }, ...]`, the active module registry (see `App_backend/src/core/services/moduleRegistry.js`). With a token the list is filtered to what that user may use; with no token it is the full list. An expired or refused Bearer token: `401`. Token cannot be checked or list cannot be filtered: `503`. Returns `[]` when no modules are installed; the frontend uses this to decide which module-provided dashboard tabs to render.
+- `GET /modules` — Public (token optional) — `[{ id, label, version }, ...]`, the active module registry (see `App_backend/src/core/services/moduleRegistry.js`). With a token the list is filtered to what that user may use; with no token it is the full list (without any module or page that restricts itself with `registerAccessRestriction`, core v0.1.234). An expired or refused Bearer token: `401`. Token cannot be checked or list cannot be filtered: `503`. Returns `[]` when no modules are installed; the frontend uses this to decide which module-provided dashboard tabs to render.
 - `GET /metrics` — Public when `ENABLE_METRICS=true` — Prometheus metrics
 
 ## Error Shape

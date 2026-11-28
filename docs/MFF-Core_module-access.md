@@ -10,6 +10,7 @@ The exact same model also applies *inside* a module, to one of its own declared 
 - **Once anything is granted, only those are allowed:** the granted users, every user whose group (`setup_users.group_id`) is granted, every user holding a granted role, and **developers/administrators always** (plus the `SUPERUSER_ROLE`, if set). An admin cannot lock themselves out.
 - A user belongs to exactly one group today, so "group access" means users whose group is granted.
 - Any one match is enough (role OR group OR user). Page/tab access for *core* pages by role is still Setup → Preferences → 🔐 Access → Core - same `developer`/`administrator`/`SUPERUSER_ROLE` always-allowed rule as above (fixed to match: it used to only bypass for `developer`).
+- **A module can narrow itself further.** With `coreApi.registerAccessRestriction` (core v0.1.234) a module limits itself, or one of its pages, to the users its own rule accepts, such as named accounts. This overrides "developers/administrators always": they are refused like anyone else. See `docs/MFF-Core_module-core-api.md`, "Limiting a module or page to named accounts".
 
 A user's grant on a module decides what they can **open**, not what other modules may use. A module that lists another module in its manifest `"requires"` may call it on behalf of any user who may use the *caller* directly or through a module that (transitively) requires the caller (one-way: a user of `alphapulldown` alone is served by `abcfold` and, through it, `slurm`; a user of `abcfold` alone is not served for `alphapulldown`), even if that user has no grant on the target; the user still cannot open the target directly. See `docs/MFF-Core_module-core-api.md`, "Calling a module you depend on".
 
@@ -28,7 +29,7 @@ Existing deployments: after pulling this change, run **Setup → Preferences →
 Both come from `App_backend/src/core/services/moduleAccessService.js`:
 
 1. **The module's API** — `moduleLoader.js` mounts an access gate in front of every module's router. **Every module request needs a login, except the routes the module lists in `publicRoutes` in its manifest** (`docs/MFF-Core_module-manifest.md`). The token is read from the `Authorization` header; only on routes the module lists in `queryTokenRoutes` may it come in `?token=` instead, with the same access check. On a path in `identifiedRoutes` that the module registered with `coreApi.registerIdentifiedRoute` (core v0.1.233), the module names the user from its own cookie or ticket instead; core refuses cross-site requests, loads that user, refuses an account that cannot sign in, and applies the same access check on every request (see `MFF-Core_module-core-api.md`, "Module's own sign-in"). A module answers `404` to anyone who may not use it (see "Rules").
-2. **The UI** — `GET /api/modules` is filtered per caller (the token is optional. With NO token it returns the full list, each entry with `pages` `null`; the list is only names and metadata, and the module routes still need a login except `publicRoutes`. From core v0.1.231 a Bearer token that is expired or refused gets `401`, never the full list: the frontend renews the token and asks again, or signs the user out if it cannot. A token that cannot be checked, or a list that cannot be filtered, gets `503`, never an unfiltered list). The frontend builds the sidebar, Dashboard tabs and routes from that one list, so a hidden module vanishes everywhere. The list is re-fetched on login/logout and when a developer starts or ends "view as"; the old list is dropped at once, before the new one arrives.
+2. **The UI** — `GET /api/modules` is filtered per caller (the token is optional. With NO token it returns the full list, each entry with `pages` `null`; the list is only names and metadata, and the module routes still need a login except `publicRoutes`. A module or page that restricts itself is left out of the signed-out list, and of the list for every user it refuses. From core v0.1.231 a Bearer token that is expired or refused gets `401`, never the full list: the frontend renews the token and asks again, or signs the user out if it cannot. A token that cannot be checked, or a list that cannot be filtered, gets `503`, never an unfiltered list). The frontend builds the sidebar, Dashboard tabs and routes from that one list, so a hidden module vanishes everywhere. The list is re-fetched on login/logout and when a developer starts or ends "view as"; the old list is dropped at once, before the new one arrives.
 
 A module request with an expired or refused token gets `401` from the gate before any module code runs (the exceptions are the module's declared `publicRoutes`, and paths it signs in itself with `registerIdentifiedRoute`, where core ignores `Authorization`).
 
@@ -38,7 +39,7 @@ A Dashboard tab remembered from an earlier visit, or requested with `?tab=`, tha
 
 ## What a module must do
 
-Nothing, for whole-module access. The access check happens in core, before the module's router. A module should **not** render its own "no access" page for this: a user without access never reaches it. (A module may still do its own finer-grained checks inside, with `req.user` and `checkRole`, exactly as before.)
+Nothing, for whole-module access by grants (a module that must be limited to named accounts calls `registerAccessRestriction`). The access check happens in core, before the module's router. A module should **not** render its own "no access" page for this: a user without access never reaches it. (A module may still do its own finer-grained checks inside, with `req.user` and `checkRole`, exactly as before.)
 
 ## Page access within a module
 
@@ -55,6 +56,7 @@ A page with no grants yet is for developer/administrator (and `SUPERUSER_ROLE`, 
 
 | Route | Purpose |
 |---|---|
+| `GET /api/modules-management/installed` | Every installed module (including one that restricts itself to other accounts), with `restrictedByModule` and `restrictedPages`; the Preferences → Modules and Access screens use it |
 | `GET /api/modules-management/access-summary` | `{ <moduleId>: { users, groups, roles } }` (granted name lists, not counts) for every module with grants, plus `lockedRoles` |
 | `GET /api/modules-management/:id/access` | Currently granted `users` / `groups` / `roles` for a module, plus `allRoles` (every role) and `lockedRoles` |
 | `PUT /api/modules-management/:id/access` | Body `{ userIds, groupIds, roleIds }`; replaces the module's grants (all empty = developers and administrators only) |
@@ -76,3 +78,4 @@ Access tab, Core page table) with no click needed to see who currently has acces
 
 - The developer "view as role/user" mode in the sidebar issues a token for the viewed identity, so `GET /api/modules`, the module gate, `requirePage` and role checks answer as for that user or role. It is read-only: a non-`GET` request gets `403`.
 - Changing grants takes effect on the user's next page load or login (the module list is fetched then); the API gate (`moduleAccessGate` / `requirePage`) applies immediately.
+- A module's own restriction cannot be changed or lifted from the Access screens; they only show a warning on the restricted module or page. Grants made there apply only to users the module accepts.

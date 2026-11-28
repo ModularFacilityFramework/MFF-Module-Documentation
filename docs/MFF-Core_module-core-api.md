@@ -62,6 +62,26 @@ For a page you declared in `module.manifest.json`'s `"pages"` (`docs/MFF-Core_mo
 
 See `docs/MFF-Core_module-access.md` for the full contract, including the frontend half (`pages` on `GET /api/modules`).
 
+### Limiting a module or page to named accounts: `registerAccessRestriction(allows, { page }?)`
+
+Core's grants always let developers, administrators and `SUPERUSER_ROLE` in. A restriction is for a module, or one of its pages, that must be limited further, for example to named accounts. It lets in only users for whom `allows(user)` returns `true`, with **no role bypass**. It only narrows: the user still needs the normal grant (so an allowed account must also be granted the module, unless it is a developer or administrator).
+
+Call it inside `register(coreApi)`; it is bound to your own module:
+
+```js
+coreApi.registerAccessRestriction((user) => allowed.includes(user.username));                  // the whole module
+coreApi.registerAccessRestriction((user) => keyHolders.includes(user.username), { page: 'keys' });   // one page declared in the manifest
+```
+
+- `user` is a copy of `{ id, username, email, group_id, roles }`, plus `viewAs` / `backgroundBy` when set. `allows` may be async. It runs on every check, so keep it quick. It must not call core access checks for its own module (`hasPage`, `getModulesForUser`).
+- Several calls must all pass.
+- **Fails closed:** anything but `true`, a throw, no answer within 5 s, or no user means refused. A call core cannot understand (not a function, an option other than `page`, a page the manifest does not declare) closes the whole module and throws.
+- A refused user does not get the module (or page) in `GET /api/modules`, so there is no sidebar entry, tab or route. The module API answers `404`, including `registerIdentifiedRoute` paths, signed module-to-module calls and background calls on that user's behalf; WebSocket upgrades are refused. `getModulesForUser`, `hasPage`, `listPageUsers`, project module access and `requirePage` (`403`, also on delegated calls) follow it. The signed-out module list leaves out every restricted module and page.
+- Under "view as", the viewed identity **and** the developer's own identity must both pass, so viewing as an allowed account opens nothing.
+- **Not covered:** your `publicRoutes` (there is no user to ask about), a projects provider you register (core serves it to every signed-in user), and a page restriction on a WebSocket handler registered without `{ page }`. Your frontend code is still part of the one build: the restriction hides the UI, not the code.
+- On a core older than v0.1.234 the function does not exist: check `typeof coreApi.registerAccessRestriction === 'function'` and keep your own server-side check.
+- **What it does not protect against:** whoever runs the deployment. Setup → Preferences → Modules and Access still list every installed module to developers and administrators, so they can update or remove it. Anyone who can edit accounts, `App_backend/.env`, module code or the server can get round any rule held in the app.
+
 ### `listRoles()`
 
 ```js
