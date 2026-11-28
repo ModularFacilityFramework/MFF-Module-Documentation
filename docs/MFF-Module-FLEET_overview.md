@@ -1,6 +1,6 @@
 # Fleet module: overview, access, configuration and machine setup
 
-Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `778d8d2` (v0.1.14).
+Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `97d6d68` (v0.1.15).
 
 **Status:** the module is not yet deployed. On 27/11/2026 the machine scripts (`agent/`) from commit `1fad83e` were installed, checked, uninstalled and reinstalled on one machine (`nusbf-raw4`). Two faults in the BeeGFS mount check were found there and fixed in `7781f89`. That fix has **not** yet been re-run on a machine; it has only been tested offline with fake mount tables.
 
@@ -15,14 +15,24 @@ Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's mac
   - usage charts, read from the Munin master's RRD files;
   - the action history.
 - **Action log.**
-- **Settings:** the machine list (add, edit, remove), "Mark checked", SSH verification, and the traffic-light limits. Each machine has an optional "Munin address": when it is set, health is read from munin-node there. SSH always uses the machine's address.
+- **Settings:** the machine list (add, edit, remove), "Mark checked", SSH verification, disc roles, and the traffic-light limits. Each machine has an optional "Munin address": when it is set, health is read from munin-node there. SSH always uses the machine's address.
 - **Page Access.**
 
 A Refresh button skips the short time for which a reading is reused (55 s on the Summary, 8 s on a machine tab). It never starts a second probe of a machine that is already being read: it takes that result. Pressing Refresh all while it runs, by anyone, joins the same pass. It refreshes health only, not the identity card or the usage charts. Windows machines have no Refresh button.
 
 Page state and table sorting use core's helpers. A first start seeds 30 machines (`backend/data/seedMachines.json`): `NUSBF-GPU1` is retired; `NUSBF-4C`, `NUSBF-20C` and `Tundra-9963484` are Windows; `garcon` is at `10.64.40.106` with Munin at `192.168.1.21`.
 
-An already seeded list gets these five corrections once, at the first start after the Update (marker row `correction:2026-11-28`); entries whose address was edited are left alone. Updating needs core's own Update, which adds the column `fleet_machine.munin_address`.
+An already seeded list gets these five corrections once, at the first start after the Update (marker row `correction:2026-11-28`); entries whose address was edited are left alone. Updating needs core's own Update, which adds the column `fleet_machine.munin_address`. The Update to v0.1.15 adds the table `fleet_disk_role`.
+
+## Disc roles
+Each disc (a mounted file system, as Munin's `df` reports it) has a role: **OS**, **cache** or **data storage**. Only OS and cache discs turn amber or red when they fill up, in space or in inodes. A data storage disc never does, however full: filling up is its purpose. SMART, RAID and BeeGFS mount checks are unchanged. Roles belong to mounted file systems, not to the physical drives on the identity card. The role is shown on the Summary cards, in three table columns (OS discs, Cache discs, Data storage; each lists its discs and sorts by the fullest) and on the machine tab's gauges and checks. File systems kept in memory (such as `/run` and `/dev/shm`) count as cache; cards and the table list them only when they are over the limit.
+
+Default roles, applied in this order:
+1. **Cache:** memory file systems, and mount points with `scratch` or `cache` in them, or `tmp`, `temp` or `swap` as a word.
+2. **OS:** `/`, `/home` itself, and `/boot`, `/efi`, `/usr`, `/var`, `/opt`, `/root` with anything under them; also BeeGFS metadata and management targets (a path with `beegfs` and `meta`, `metadata`, `mgmt` or `mgmtd`), because a full one stops the file system.
+3. **Data storage:** everything else, including BeeGFS storage targets and mounts, data arrays, `/srv` and folders under `/home/`.
+
+**Settings → Discs** (on each Linux machine's row) changes the role of any disc, or returns it to the default. It lists the discs of the machine's last reading; a change is saved at once and applies to the lights without a new reading. It needs the "Settings" right.
 
 ## Traffic light
 There are five states, each with its own colour, shape, symbol and word. In rank order: **OK**, **UNKNOWN**, **WARNING**, **CRITICAL**, **DOWN**. UNKNOWN ranks above OK, so a machine without the Fleet Munin plugins shows grey.
@@ -41,7 +51,7 @@ Default limits (changed on Settings):
 |---|---|---|
 | Load per CPU thread | 1 | 2 |
 | Memory | 90 % | 95 % |
-| Disk space and inodes | 85 % | 95 % |
+| OS and cache disc space and inodes | 85 % | 95 % |
 | CPU and GPU temperature | 80 °C | 90 °C |
 
 - **Also critical:** failed systemd services, degraded RAID, a failed SMART test, a missing BeeGFS mount.
