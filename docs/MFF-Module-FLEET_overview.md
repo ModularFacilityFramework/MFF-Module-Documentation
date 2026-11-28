@@ -27,8 +27,9 @@ There are five states, each with its own colour, shape, symbol and word. In rank
 A machine's light is that of its worst check, and the reason text is that check's.
 
 - **DOWN** is only for a machine that gives no answer at all. A refused connection counts as an answer. If neither munin-node nor SSH accepts, the machine shows WARNING. If SSH is open, or munin-node accepts but gives no data, it shows UNKNOWN.
-- **Not yet checked:** a machine that answers is UNKNOWN (grey), or WARNING (amber) if a check found something, never red. One that gives no answer is DOWN with the note.
-- Windows machines and switched-off machines are grey.
+- **Not yet checked:** a machine that answers is UNKNOWN (grey), or WARNING (amber) if a check found something, never red. An unchecked machine that gives no answer is DOWN; its reason reads: `Not checked yet (<that note>). No answer since <time>.` The note is the machine's "Not checked yet, because…" field on Settings.
+- Windows machines are grey.
+- A machine whose monitoring is switched off in Settings ("Monitored" unticked) is grey (UNKNOWN). A powered-off machine gives no answer and is DOWN.
 - A checked machine with a critical fault is still CRITICAL (red).
 
 Default limits (changed on Settings):
