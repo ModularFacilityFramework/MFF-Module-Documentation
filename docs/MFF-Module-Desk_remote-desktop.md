@@ -1,9 +1,17 @@
 # Desk module: Remote Desktop
 
-Module `desk` (mount `/desk`, version 0.1.14). It gives developers a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login.
+Module `desk` (mount `/desk`, version 0.1.15). It gives a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login. It is private: see "Who may use it".
 
 ## What the user sees
-One Dashboard tab and a sidebar entry, both named "Remote Desktop". Core orders the tab and the sidebar entry alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
+One left-hand menu entry, "Desktop" (`registerMenuPage`, path `/desk`). It is the only way in: there is no Dashboard tab. Core orders menu entries alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
+
+## Who may use it
+Only the accounts on Desk's own list of allowed users (`ALLOWED_USERS`, see "Configuration") can use it. Such an account also needs the `developer` role and core's module access.
+
+- Every Desk route, `/proxy` and the WebSocket tunnel answer `404` to every other account, developers and administrators included.
+- "View as" and background or delegated calls from other modules are refused too. "View as" gets `404`.
+- **Limitation:** other developers and administrators still see the "Desktop" menu entry, although they cannot use it. This stays until core offers a per-user restriction, which has been requested from `mff-core`.
+- The list controls the app only. Anyone who can edit the server configuration, rename or reset accounts, or reach Guacamole directly is outside it.
 
 ## How a session starts
 1. The button sends `POST /api/desk/session` (`authenticateToken` and `checkRole` `developer`). It refuses "view as" identities.
@@ -21,12 +29,15 @@ One Dashboard tab and a sidebar entry, both named "Remote Desktop". Core orders 
 - Logging out of the app does not end a desk session before it expires.
 
 ## Configuration
-Declared in the manifest, read through `coreApi.getModuleConfig()`; in `App_backend/.env` they are `MODULE_DESK_*`. All are required:
+Declared in the manifest, read through `coreApi.getModuleConfig()`; in `App_backend/.env` they are `MODULE_DESK_*`. These are required:
 - `GUAC_HOST`
 - `GUAC_PORT`
 - `GUAC_CONTEXT_PATH`
 - `GUAC_USERNAME`
 - `GUAC_PASSWORD`
+
+Optional:
+- `ALLOWED_USERS` (`MODULE_DESK_ALLOWED_USERS`): comma-separated MFF usernames, not case-sensitive. If it is not set, the built-in default applies: the owner only (`namlb`). If it is set but empty, nobody can use Desk. A change needs a backend restart.
 
 The module has no database tables.
 
@@ -47,4 +58,4 @@ Desk handles Guacamole's WebSocket tunnel through `coreApi.registerUpgradeHandle
 
 ## Differences from the old NUSBF app
 - The old app was one button, gated only by a hard-coded username in the frontend, with a constant cookie and hard-coded Guacamole credentials.
-- The desk module has a backend role check, credentials from configuration, a per-session cookie, and token expiry.
+- The desk module checks the allowed users and the role in the backend, takes credentials from configuration, and uses a per-session cookie and token expiry.
