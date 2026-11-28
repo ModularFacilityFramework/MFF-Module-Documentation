@@ -1,6 +1,6 @@
 # Fleet module: overview, access, configuration and machine setup
 
-Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `7781f89`.
+Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `93cb24c` (v0.1.13).
 
 **Status:** the module is not yet deployed. On 27/11/2026 the machine scripts (`agent/`) from commit `1fad83e` were installed, checked, uninstalled and reinstalled on one machine (`nusbf-raw4`). Two faults in the BeeGFS mount check were found there and fixed in `7781f89`. That fix has **not** yet been re-run on a machine; it has only been tested offline with fake mount tables.
 
@@ -14,15 +14,22 @@ Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's mac
   - usage charts, read from the Munin master's RRD files;
   - the action history.
 - **Action log.**
-- **Settings:** the machine list (add, edit, remove), "Mark checked", SSH verification, and the traffic-light limits.
+- **Settings:** the machine list (add, edit, remove), "Mark checked", SSH verification, and the traffic-light limits. Each machine has an optional "Munin address": when it is set, health is read from munin-node there. SSH always uses the machine's address.
 - **Page Access.**
 
-Page state and table sorting use core's helpers. The first start seeds 31 machines (`backend/data/seedMachines.json`).
+Page state and table sorting use core's helpers. A first start seeds 30 machines (`backend/data/seedMachines.json`): `NUSBF-GPU1` is retired; `NUSBF-4C`, `NUSBF-20C` and `Tundra-9963484` are Windows; `garcon` is at `10.64.40.106` with Munin at `192.168.1.21`.
+
+An already seeded list gets these five corrections once, at the first start after the Update (marker row `correction:2026-11-28`); entries whose address was edited are left alone. Updating needs core's own Update, which adds the column `fleet_machine.munin_address`.
 
 ## Traffic light
 There are five states, each with its own colour, shape, symbol and word. In rank order: **OK**, **UNKNOWN**, **WARNING**, **CRITICAL**, **DOWN**. UNKNOWN ranks above OK, so a machine without the Fleet Munin plugins shows grey.
 
-A machine's light is that of its worst check, and the reason text is that check's. A machine you have not yet checked stays red until you press "Mark checked".
+A machine's light is that of its worst check, and the reason text is that check's.
+
+- **DOWN** is only for a machine that gives no answer at all. A refused connection counts as an answer. If neither munin-node nor SSH accepts, the machine shows WARNING. If SSH is open, or munin-node accepts but gives no data, it shows UNKNOWN.
+- **Not yet checked:** a machine that answers is UNKNOWN (grey), or WARNING (amber) if a check found something, never red. One that gives no answer is DOWN with the note.
+- Windows machines and switched-off machines are grey.
+- A checked machine with a critical fault is still CRITICAL (red).
 
 Default limits (changed on Settings):
 
