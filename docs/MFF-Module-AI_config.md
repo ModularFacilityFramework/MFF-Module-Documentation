@@ -55,9 +55,11 @@ Core's `WORKSPACE_BASE_DIR` must be set, and "workspace storage" ticked for each
   - speech to text (the microphone button; never given to the model);
   - plus the tools of every MCP server added on Setup → Tool servers (the facility's: PDBe API, PDBe Search, BioMCP).
 
+  A "Source" filter shows the Built-in tools or the tools of one tool server. It is kept per user; if the chosen server has been removed, it falls back to "all".
+
   Each tool also has a status (tested, done, planned) in "What the AI can do" at the top of the tab. None is installed at first. Only models with the `tools` capability use them.
-- **Tool servers** (developers and administrators only): a tool server is a separate program that gives the AI more tools, for example to look up protein structures (PDBe) or scientific articles and genes (BioMCP). The tab lists every server with its name, address, a status light (green "answering", red "not answering", grey "switched off"), how many tools it offers and how many are in use.
-  - "Add a server", at the top, takes a name and an address.
+- **Tool servers** (developers and administrators only): a tool server is a separate program that gives the AI more tools, for example to look up protein structures (PDBe) or scientific articles and genes (BioMCP). The tab lists every server with its name, address, a status light (green "answering", red "not answering", grey "switched off"), how many tools it offers and how many are in use. A server that does not answer has the reason under its red light.
+  - "Add a server", at the top, takes a name and an address. Only `http` and `https` addresses are accepted. The form makes the short name from the name typed (for example "PDBe API" → `pdbe_api`) and shows it under the form before adding: lowercase letters, digits and `_`, starting with a letter, at most 20 characters.
   - Each server has buttons to show its tools, Disable or Enable it, and Remove it (with a confirmation).
   - "Show tools" lists the server's tools with a tick box each: only ticked tools are offered to the AI. Who may use each tool (Standard or Advanced level) is still set on the Tools tab.
   - The tab keeps its state per user (sorting, which servers show their tools, an unsaved add form).
@@ -152,8 +154,8 @@ Setup -> Model (switch permission as before):
   - it is offered to the AI only when ticked on Setup → Tool servers; its level (and optionally roles) is set on Setup → Tools like any tool;
   - the guard reads the arguments the AI sends and the answer that comes back (an unsafe request is stopped, an unsafe answer withheld);
   - every use is logged per answer in `ai_tool_use` (tool, server key).
-- Servers are managed on Setup → Tool servers (see "Setup tabs"). Saved in `ai_settings` `'mcp.servers'`; tool lists are cached 5 minutes.
-- Optional setting `MODULE_AI_MCP_SERVERS` (backend `.env`). Format: `key=Name|address|tool,tool`, with entries separated by `;`. The tool list is optional. Listed tools are put in use: a name matches the tool's own name, or a tool whose name contains it when no tool has that exact name.
+- Servers are managed on Setup → Tool servers (see "Setup tabs"). Saved in `ai_settings` `'mcp.servers'`; tool lists are cached 5 minutes ("Check again" on the Tool servers tab fetches them fresh).
+- Optional setting `MODULE_AI_MCP_SERVERS` (backend `.env`). Format: `key=Name|address|tool,tool`, with entries separated by `;`. The tool list is optional. An entry whose key (the short name) or address is outside the rules under "Setup tabs" is skipped. Listed tools are put in use: a name matches the tool's own name, or a tool whose name contains it when no tool has that exact name.
   - Each server is added once, at start-up (and checked every 10 minutes until it answers, for its default tools). A server the user removes on the Tool servers tab is never added again.
   - Example (placeholder address): `MODULE_AI_MCP_SERVERS="pdbe_api=PDBe API|http://<host>:<port>/api/|get_ai_summary"`
   - The facility's own servers and addresses: see the internal notes.
