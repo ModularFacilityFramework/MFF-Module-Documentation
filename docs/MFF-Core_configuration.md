@@ -37,6 +37,7 @@ Frontend links and CORS
 - `PUBLIC_URL_PATH` — the sub-folder the app is served under (e.g. `/MFF-cloud`). **Read at build time** by `scripts/build.js`, and it must match the Apache `Alias`. Changing it needs a frontend rebuild.
 - `FRONTEND_URL` — absolute URL to the frontend, **including the deployment subpath** (e.g. `https://host/MFF-cloud`). Every link in an email is built from it: password reset, "review pending registrations" (admins), "log in" (registration received / account activated), and the Support link in ticket emails. If unset, emails are still sent but without a link.
 - `CORS_ORIGINS` — comma-separated list of allowed origins (leave empty to allow all in dev)
+- `FRONTEND_URL` and `CORS_ORIGINS`: core also uses them to recognise the app's own pages on routes and WebSockets a module signs in itself.
 
 Email
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_AUTH`, `SMTP_USER`, `SMTP_PASS`, `SMTP_REJECT_UNAUTHORIZED` — SMTP settings for outbound mail. `SMTP_REJECT_UNAUTHORIZED`: unset counts as `true`, so the suggested production value is `true`.
