@@ -48,7 +48,7 @@ Every Doppio session runs in a Science project (`docs/MFF-Module-Science_project
 - Core's browser lock (a person with no writable project) is a screen aid; the server checks every launch itself.
 - Launching is refused without a project, with read-only or no access, for an archived project, and for "Project template".
 - Each session is a project item: `item_type` `doppio_session`, `item_id` the session id, status the session state, link `/dashboard?tab=doppio`. It is sent again when a request sees a changed state; a `403` or `409` is final for that state, other failures are retried on a later request and shown as a warning. A state change nobody views is not sent.
-- A proxy ticket needs write access to the session's project (adopted template sessions excepted). A ticket already in use keeps working while it stays active.
+- A proxy ticket needs write access to the session's project (adopted template sessions excepted). A ticket already in use stops working within about 30 s of its owner losing write access to the project.
 - Sessions created before this change are moved into Science's "Project template" by a background job (first run 15 s after start, delay doubling up to 1 h, until none are left), acting as each session's owner; owners core refuses (e.g. inactive or without Doppio access) stay unadopted and are logged. Moved sessions are listed, to their owner only, under the "Project template" tab.
 - New columns on `doppio_sessions`: `project_id`, `project_item_state`, `project_is_template` (added by core's schema diffing).
 
@@ -108,6 +108,8 @@ Every Doppio session runs in a Science project (`docs/MFF-Module-Science_project
   (`TICKET_IDLE_TTL_MS`, 20 minutes) — a session idle longer than that
   needs the parent tab to mint a fresh ticket and reload the iframe.
 
+From v0.1.52 the proxy paths are signed in through core's identified routes (core 0.1.233 or later): the manifest lists `"identifiedRoutes": [{ "path": "/sessions/:id/proxy" }]` and the module calls `coreApi.registerIdentifiedRoute`. For every request (all methods) core calls the module's `identify`, which requires the unexpired ticket (`?ticket=` or the HttpOnly, SameSite=Lax, per-session-path cookie) of that session and that its owner still has write on the session's project (adopted template sessions excepted; the answer is cached 30 s, so losing access takes effect within about 30 s); core then checks the account and module access and refuses cross-site requests. No ticket is issued while viewing as another user. The proxy re-sends JSON bodies that core has already parsed, and drops doppio-web's `Set-Cookie` and any `Referrer-Policy: no-referrer`. On an older core the live view does not work.
+
 ## Routes
 
 ### `POST /sessions`
@@ -136,14 +138,15 @@ ended`/`failed`. Never returns `token`, the proxy ticket, or the raw
 
 Owner-only, session must be `running`. Returns `{ ticket, expiresAt }`. Needs
 write access on the session's project (`403`), except for adopted template
-sessions.
+sessions. `403` while viewing as another user.
 
 ### `ALL /sessions/:id/proxy/*`
 
-Not behind `coreApi.authenticateToken` (an `<iframe src>` can't send an
-`Authorization` header) — ticket/cookie-authenticated instead, see
-"Security model" above. Reverse-proxies to the session's `doppio-web`
-process.
+Signed in by core's identified route (see "Security model" above): it is not
+publicly open, and not behind a core login header (an `<iframe src>` can't
+send an `Authorization` header). `401` for a missing, invalid or expired
+ticket, or lost write access to the project; `409` if the session is not
+running. Reverse-proxies to the session's `doppio-web` process.
 
 ### `GET`/`PUT /page-access`
 
