@@ -1,6 +1,6 @@
 # Desk module: Remote Desktop
 
-Module `desk` (mount `/desk`, version 0.1.16). It gives a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login. It is private: see "Who may use it".
+Module `desk` (mount `/desk`, version 0.1.17). It gives a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login. It is private: see "Who may use it".
 
 ## What the user sees
 One left-hand menu entry, "Desktop" (`registerMenuPage`, path `/desk`). It is the only way in: there is no Dashboard tab. Core orders menu entries alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
@@ -30,7 +30,12 @@ Only the accounts on Desk's own list of allowed users (`ALLOWED_USERS`, see "Con
 - Core checks module access on every request.
 - The `developer` role is required on every proxy HTTP request and on the WebSocket tunnel.
 - The desk token is no longer accepted on `/proxy` as `Authorization: Bearer`.
-- Logging out of the app does not end a desk session before it expires.
+
+## When the user's sign-in ends
+- With mff-core 0.1.235 or later, Desk registers `coreApi.onUserSignOut` (`docs/MFF-Core_module-core-api.md`, "When a user's sign-in ends"). A logout (even with an expired access token), a run-out sign-in that the browser tries to renew, deactivation, a password reset or deletion revokes all of that user's desk sessions, on every device, and closes their open WebSocket tunnels and in-flight proxy requests.
+- Not covered, so the 8 h limit applies: a sign-in that runs out while the browser never returns, changes made straight in the database, and events that happen while the backend is down (a backend restart drops all desk sessions anyway).
+- On an older core, logging out of the app does not end a desk session before it expires.
+- Removing the `developer` role does not cut an already-open tunnel; it applies at the next connect.
 
 ## Configuration
 Declared in the manifest, read through `coreApi.getModuleConfig()`; in `App_backend/.env` they are `MODULE_DESK_*`. These are required:
