@@ -56,10 +56,10 @@ There are six states, each with its own colour, shape, symbol and word. In rank 
 
 A machine's light is that of its worst check, and the reason text is that check's.
 
-- **DOWN** is only for a machine that gives no answer at all. A refused connection counts as an answer, and so does a reply to ping. If neither munin-node nor SSH accepts a connection, or the machine only answers ping, it shows WARNING. If SSH is open, or munin-node accepts but gives no data, it shows UNKNOWN. DOWN is shown only while that reading is less than 5 minutes old; an older "no answer" is grey: "No answer when last read (<time>); not read since".
+- **DOWN** is only for a machine that gives no answer at all. A refused connection counts as an answer, and so does a reply to ping. For a Linux machine: if neither munin-node nor SSH accepts a connection, or it only answers ping, it shows WARNING; if SSH is open, or munin-node accepts but gives no data, it shows UNKNOWN. A Ping only device that answers ping is OK. A QNAP device that answers is WARNING if it does not answer ping or its web page does not answer. An unidentified device is always grey (UNKNOWN), never DOWN. DOWN is shown only while the reading is less than 5 minutes old; an older "no answer" is grey: "No answer when last read (<time>); not read since".
 - **Not yet checked:** a machine that answers is UNKNOWN (grey), or WARNING (amber) if a check found something, never red. An unchecked machine that gives no answer is DOWN; its reason reads: `Not checked yet (<that note>). No answer since <time>.` The note is the machine's "Not checked yet, because…" field on Settings.
 - Windows machines are grey.
-- A machine whose monitoring is switched off in Settings ("Monitored" unticked) is grey (UNKNOWN). A powered-off machine gives no answer and is DOWN.
+- A machine whose monitoring is switched off in Settings ("Monitored" unticked) is grey (UNKNOWN). A powered-off machine gives no answer and is DOWN, unless it is marked as shut down or is unidentified.
 - A checked machine with a critical fault is still CRITICAL (red).
 
 There is no background health timer. Machines are read while a Fleet page has focus: besides the Summary and machine tabs, the tab list on any Fleet page starts reading the machines whose result is more than about a minute old (only for users with the Summary or Machine tabs right).
