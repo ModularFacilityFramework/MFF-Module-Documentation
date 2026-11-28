@@ -1,6 +1,6 @@
 # Desk module: Remote Desktop
 
-Module `desk` (mount `/desk`, version 0.1.13). It gives developers a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login.
+Module `desk` (mount `/desk`, version 0.1.14). It gives developers a Remote Desktop session through an existing Apache Guacamole, without the user ever seeing Guacamole's login.
 
 ## What the user sees
 One Dashboard tab and a sidebar entry, both named "Remote Desktop". Core orders the tab and the sidebar entry alphabetically by label (`docs/MFF-Core_module-core-api.md`, "Dashboard tab order").
@@ -16,7 +16,7 @@ One Dashboard tab and a sidebar entry, both named "Remote Desktop". Core orders 
 ## Proxy sign-in
 - The manifest has `"identifiedRoutes": [{"path": "/proxy"}]`. `/proxy` is signed in through `coreApi.registerIdentifiedRoute` with desk's own token (`?token=` on the first hit) or the `desk_rd_session` cookie (`docs/MFF-Core_module-core-api.md`, "Module's own sign-in").
 - Core checks module access on every request.
-- The `developer` role is required on every proxy HTTP request. The WebSocket tunnel checks module access, not the role.
+- The `developer` role is required on every proxy HTTP request and on the WebSocket tunnel.
 - The desk token is no longer accepted on `/proxy` as `Authorization: Bearer`.
 - Logging out of the app does not end a desk session before it expires.
 
@@ -39,6 +39,7 @@ The module has no database tables.
 Desk handles Guacamole's WebSocket tunnel through `coreApi.registerUpgradeHandler('/proxy/websocket-tunnel', handler, { identify })` (`docs/MFF-Core_module-core-api.md`, "WebSocket"). The manifest has `"websocket": true`, and the module depends on `ws`.
 - The `identify` callback reads the HttpOnly `desk_rd_session` cookie (the per-session token minted by `POST /session`, 8 h expiry). Guacamole's own `token` query parameter therefore passes through untouched.
 - Core re-checks the user's real identity and module access on every connect.
+- The tunnel also requires the `developer` role on every connect and reconnect, the same as the HTTP `/proxy` routes: `403`, or `503` if the role lookup fails. An already-open tunnel is not cut when the role is revoked; the check applies at the next connect.
 - The backend relays frames to Guacamole's `/websocket-tunnel` with the `guacamole` subprotocol.
 - `http-proxy-middleware`'s own `ws` option is off: it forwarded every upgrade without authentication.
 - Production needs `mod_proxy_wstunnel` and `upgrade=websocket` on the API `ProxyPass` (`docs/MFF-Core_dev-setup.md`, "WebSockets through the web server"). Without it Guacamole's client falls back to its HTTP tunnel, which still works.
