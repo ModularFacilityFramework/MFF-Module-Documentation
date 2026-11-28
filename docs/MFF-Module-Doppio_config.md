@@ -34,11 +34,25 @@ browser to that job's live `doppio-web` process for the session's lifetime.
 
 SLURM's own external API never creates, reads, or serves `workDir`'s
 contents — this module owns that entirely. `backend/services/doppioSlurm.js`
-writes a `submit.sh` into `workDir` that launches `doppio-web` bound to
-`0.0.0.0` on a free port, waits for its own log to confirm `"Doppio is now
+writes a `submit.sh` into `workDir` that launches `doppio-web` on a free
+port, bound to the address of `hostname -f`, waits for its own log to confirm `"Doppio is now
 running."`, and writes `host`/`port` to `workDir/doppio-status.json` (or a
 `.error` sibling on failure) once ready. `backend/routes/sessionRoutes.js`
 polls for that file to learn when a session is actually reachable.
+
+## The installed Doppio and each session's settings (v0.1.54)
+
+Doppio is installed on this machine as `/home/linuxhomes/software/doppio_1.6.0b1/app/doppio-web` (1.6.0b1). The module runs that install; set `MODULE_DOPPIO_BIN` to the full path if the job's `PATH` does not include it, and any compute node must see it.
+
+Doppio reads its settings only from `$XDG_CONFIG_HOME/ccpem/doppio/doppio-config/app-settings.json` (`~/.config` when unset). `submit.sh` therefore gives each session its own config home, `<work_dir>/config`:
+- every entry of the job user's config home is linked into it, including `ccpem/pipeliner` (Pipeliner's settings come from the same place), except `ccpem/doppio`;
+- the user's `doppio-config` folder (settings, themes, images), if any, is copied, and in the copy `projectDirectory` and `knownProjects` are set to `<work_dir>/project`; other settings the user has are kept.
+
+The user's own Doppio settings and `~/ccpem-project` are not used or changed. `DOPPIO_RUNTIME_DIR` is `<work_dir>/runtime`. If the settings cannot be prepared, the job stops with an error status and Doppio is not started. Each new session starts with an empty Doppio project. `XDG_CONFIG_HOME` is inherited by what Doppio starts. `doppio-web.log` and `submit.sh` in the work folder contain the session's Doppio token.
+
+Tested on 28/11/2026 against this install: the module's `submit.sh`, run directly with bash (not through SLURM) with a throwaway home, and the module's proxy routes with stand-ins for core's login gate, database and projects. Sign-in, the redirect to `ui/`, UI files, API reads and a save from the UI (`PATCH`) worked, also inside an iframe in a browser. Not tested: a real core, a real SLURM job, a separate compute node, running a Doppio job, loading a structure in the 3D viewer.
+
+Doppio's 3D viewer (Moorhen) needs `SharedArrayBuffer`, which requires a cross-origin isolated page. Doppio sends the headers for that, but inside the iframe on core's page they have no effect, so the viewer does not start there. The Doppio tab has an "Open Doppio in a new tab" link (same ticketed URL); opened that way the page is cross-origin isolated. Browsers allow this only over HTTPS or on localhost.
 
 ## Projects (v0.1.51)
 
@@ -79,8 +93,8 @@ Every Doppio session runs in a Science project (`docs/MFF-Module-Science_project
   are static, admin-configured defaults — no per-request partition
   selection or auto-detection against SLURM's `GET
   /external/gpu-partitions`.
-- **SSH-tunnel to the compute node.** `doppio-web` is launched bound to
-  `0.0.0.0` and this module's backend proxies to it directly over plain
+- **SSH-tunnel to the compute node.** `doppio-web` is bound to the compute
+  node's `hostname -f` address and this module's backend proxies to it directly over plain
   HTTP — a deliberate choice (see "Security model" below), even though
   Doppio's own docs suggest SSH port forwarding as their supported remote
   pattern.
@@ -159,26 +173,16 @@ Unchanged, generic role-gated tab-visibility admin (`doppio_page_access`).
 Not guessed as fact anywhere in this module's code — flagged for whoever
 next has access to a real deployment:
 
-1. `app-settings.json`'s exact schema and `doppio-web`'s lookup path/precedence
-   for it. `doppioSlurm.js`'s `buildAppSettings()` writes a best-guess
-   `{"project_directory": "<workDir>/project"}` — doppio-web's own docs
-   only describe it as "the current project setting", without documenting
-   the key name or lookup path precisely.
-2. Whether `doppio-web`'s Uvicorn stack needs WebSockets for any live UI
-   update. This module's proxy is HTTP-only today and registers no upgrade
-   handler.
-3. Stability of grepping `"Doppio is now running."` in `doppio-web.log`
-   across `doppio-web` versions, and whether the 120s default startup
-   timeout is realistic.
-4. Whether `hostname -f` on a real compute node resolves to something
+1. WebSockets: none seen with 1.6.0b1 (no `WebSocket`/`EventSource` in its UI files from a text search, and none needed in the pages tried). Job running was not tried.
+2. The ready line `Doppio is now running.` is confirmed for 1.6.0b1 (ready in about 5 s on this machine); other versions unchecked, and so is start-up time on a real compute node.
+3. Whether `hostname -f` on a real compute node resolves to something
    reachable from the app server over plain HTTP — the whole "no SSH
    tunnel" model assumes this.
-5. Whether the shared workspace path is mounted read/writable from the app
+4. Whether the shared workspace path is mounted read/writable from the app
    server process itself (`pollStatusFile()` reads it directly), not just
    from compute nodes — ABCFold's own result-reading already assumes this,
    but worth confirming per-deployment.
-6. Whether core's own frontend has any CSP/iframe-sandboxing that would
-   block this same-origin-different-path iframe.
+5. Doppio sends no `X-Frame-Options` or CSP, and its UI loads in a same-origin iframe; whether core's own pages add a policy that blocks it is not yet checked.
 
 ## `coreApi` gaps flagged, not routed around
 
@@ -195,8 +199,8 @@ directly. Recorded here for anyone considering a future `coreApi` change
    hand-rolling the ticket/cookie/token-injection scheme above.
 2. **WebSocket forwarding is not implemented here.** Core now provides
    `coreApi.registerUpgradeHandler` (`docs/MFF-Core_module-core-api.md`,
-   "WebSocket"), so this is no longer a core gap. If open item 2 shows
-   `doppio-web` needs WebSockets, this module must add `"websocket": true` to
+   "WebSocket"), so this is no longer a core gap. If `doppio-web` turns out
+   to need WebSockets (none seen so far), this module must add `"websocket": true` to
    its manifest and register an upgrade handler that authenticates with its own
    proxy ticket (`identify`) and forwards to the session; nothing of that is
    built or tested.
