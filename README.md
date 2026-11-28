@@ -84,6 +84,7 @@ Do not rename or delete a document without checking who refers to it: other repo
 | [`MFF-Module-AlphaPulldown_library.md`](docs/MFF-Module-AlphaPulldown_library.md) | AlphaPulldown module — shared proteome and feature library |
 | [`MFF-Module-AlphaPulldown_target.md`](docs/MFF-Module-AlphaPulldown_target.md) | AlphaPulldown module — Target tab |
 | [`MFF-Module-CryoEM_projects.md`](docs/MFF-Module-CryoEM_projects.md) | CryoEM module: projects |
+| [`MFF-Module-CryoEM_temcontrol.md`](docs/MFF-Module-CryoEM_temcontrol.md) | CryoEM module: the TemControl page |
 | [`MFF-Module-Crystaleye_projects.md`](docs/MFF-Module-Crystaleye_projects.md) | CrystalEye module: projects |
 | [`MFF-Module-Desk_remote-desktop.md`](docs/MFF-Module-Desk_remote-desktop.md) | Desk module — Remote Desktop |
 | [`MFF-Module-Doppio_config.md`](docs/MFF-Module-Doppio_config.md) | doppio module configuration |
