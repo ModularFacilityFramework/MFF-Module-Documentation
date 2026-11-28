@@ -7,7 +7,7 @@ Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's mac
 ## Pages
 - **Summary:** a count per traffic light, and cards grouped into Servers, GPU nodes, Storage and Workstations, with problem machines first. The same data is also a sortable table. The title bar has **Refresh all**, which reads every machine again now; while it runs it shows how many are left. Each card of a Linux machine has its own **Refresh** button and the time of its reading ("Reading now…" while it is read). The table has a sortable "Read at" column; its rows have no Refresh button.
 - **One tab per machine:**
-  - a title bar with two buttons, labelled exactly `sudo apt-get update && sudo apt-get -y dist-upgrade && sudo apt-get -y autoremove` and `sudo reboot now`;
+  - a title bar with two action buttons, labelled exactly `sudo apt-get update && sudo apt-get -y dist-upgrade && sudo apt-get -y autoremove` and `sudo reboot now`;
   - a Refresh button in the title bar that reads this machine again now, with the time the reading was taken;
   - an identity card, collected over SSH daily and with "Collect now";
   - live health, read only while the tab has focus;
