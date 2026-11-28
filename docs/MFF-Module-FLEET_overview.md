@@ -1,13 +1,14 @@
 # Fleet module: overview, access, configuration and machine setup
 
-Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `93cb24c` (v0.1.13).
+Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's machines, with two actions on each (upgrade and reboot). This describes commit `778d8d2` (v0.1.14).
 
 **Status:** the module is not yet deployed. On 27/11/2026 the machine scripts (`agent/`) from commit `1fad83e` were installed, checked, uninstalled and reinstalled on one machine (`nusbf-raw4`). Two faults in the BeeGFS mount check were found there and fixed in `7781f89`. That fix has **not** yet been re-run on a machine; it has only been tested offline with fake mount tables.
 
 ## Pages
-- **Summary:** a count per traffic light, and cards grouped into Servers, GPU nodes, Storage and Workstations, with problem machines first. The same data is also a sortable table.
+- **Summary:** a count per traffic light, and cards grouped into Servers, GPU nodes, Storage and Workstations, with problem machines first. The same data is also a sortable table. The title bar has **Refresh all**, which reads every machine again now; while it runs it shows how many are left. Each card of a Linux machine has its own **Refresh** button and the time of its reading ("Reading now…" while it is read). The table has a sortable "Read at" column; its rows have no Refresh button.
 - **One tab per machine:**
   - a title bar with two buttons, labelled exactly `sudo apt-get update && sudo apt-get -y dist-upgrade && sudo apt-get -y autoremove` and `sudo reboot now`;
+  - a Refresh button in the title bar that reads this machine again now, with the time the reading was taken;
   - an identity card, collected over SSH daily and with "Collect now";
   - live health, read only while the tab has focus;
   - the speed of the connected port;
@@ -16,6 +17,8 @@ Module `fleet` (repository `MFF-Module-FLEET`): monitoring of the facility's mac
 - **Action log.**
 - **Settings:** the machine list (add, edit, remove), "Mark checked", SSH verification, and the traffic-light limits. Each machine has an optional "Munin address": when it is set, health is read from munin-node there. SSH always uses the machine's address.
 - **Page Access.**
+
+A Refresh button skips the short time for which a reading is reused (55 s on the Summary, 8 s on a machine tab). It never starts a second probe of a machine that is already being read: it takes that result. Pressing Refresh all while it runs, by anyone, joins the same pass. It refreshes health only, not the identity card or the usage charts. Windows machines have no Refresh button.
 
 Page state and table sorting use core's helpers. A first start seeds 30 machines (`backend/data/seedMachines.json`): `NUSBF-GPU1` is retired; `NUSBF-4C`, `NUSBF-20C` and `Tundra-9963484` are Windows; `garcon` is at `10.64.40.106` with Munin at `192.168.1.21`.
 
@@ -57,6 +60,7 @@ Developers and administrators always have every page. There are no other special
 - A role granted "Machine tabs" can press upgrade and reboot.
 - A role granted "Settings" can change machine addresses and accept SSH host keys.
 - A user without "Machine tabs" sees summary cards that do not open.
+- Refreshing needs no extra right. "Summary" allows Refresh all and the card buttons; "Machine tabs" allows the button on a machine tab.
 
 ## Configuration
 All keys are optional and go in core's `.env` as `MODULE_FLEET_<KEY>`.
